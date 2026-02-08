@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="Appointment" />
+        <module name="GatewayMS" />
+        <module name="Eureaka-Server" />
+        <module name="demo" />
+      </profile>
+      <profile name="Annotation profile for PharmacyMS" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.40/lombok-1.18.40.jar" />
+        </processorPath>
+        <module name="UserMS" />
+        <module name="media" />
+        <module name="ProfileMS" />
+        <module name="PharmacyMS" />
+      </profile>
+      <profile name="Annotation profile for hms-common" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
+        </processorPath>
+        <module name="hms-common" />
+      </profile>
+      <profile name="Annotation profile for PaymentMS" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.42/lombok-1.18.42.jar" />
+        </processorPath>
+        <module name="PaymentMS" />
+        <module name="NotificationMS" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="chat-app" target="21" />
+      <module name="ChatMS" target="21" />
+      <module name="HMS" target="21" />
+      <module name="payment-ms" target="21" />
+      <module name="pharmacy" target="21" />
+    </bytecodeTargetLevel>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="Appointment" options="-parameters" />
+      <module name="ChatMS" options="-parameters" />
+      <module name="Eureaka-Server" options="-parameters" />
+      <module name="GatewayMS" options="-parameters" />
+      <module name="HMS" options="-parameters" />
+      <module name="NotificationMS" options="-parameters" />
+      <module name="PaymentMS" options="-parameters" />
+      <module name="PharmacyMS" options="-parameters" />
+      <module name="ProfileMS" options="-parameters" />
+      <module name="UserMS" options="-parameters" />
+      <module name="chat-app" options="-parameters" />
+      <module name="demo" options="-parameters" />
+      <module name="hms-common" options="-parameters" />
+      <module name="media" options="-parameters" />
+      <module name="payment-ms" options="-parameters" />
+      <module name="pharmacy" options="-parameters" />
+    </option>
+  </component>
+</project>
