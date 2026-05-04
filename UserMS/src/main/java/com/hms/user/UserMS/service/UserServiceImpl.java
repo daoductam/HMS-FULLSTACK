@@ -1,30 +1,33 @@
 package com.hms.user.UserMS.service;
 
-import com.hms.user.UserMS.clients.Profile;
 import com.hms.user.UserMS.clients.ProfileClient;
 import com.hms.user.UserMS.dto.*;
 import com.hms.user.UserMS.entity.User;
 import com.hms.user.UserMS.exception.ErrorCode;
 import com.hms.user.UserMS.exception.HmsException;
 import com.hms.user.UserMS.repository.UserRepository;
+import io.quarkus.elytron.security.common.BcryptUtil;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 import java.util.List;
 import java.util.Optional;
 
 @Slf4j
-@Service("userService")
+@ApplicationScoped
 @Transactional
-@RequiredArgsConstructor
-public class UserServiceImpl implements UserService{
+public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     private final ProfileClient profileClient;
+
+    public UserServiceImpl(UserRepository userRepository, @RestClient ProfileClient profileClient) {
+        this.userRepository = userRepository;
+        this.profileClient = profileClient;
+    }
 
     @Override
     public void registerUser(UserDTO userDTO) throws HmsException {
@@ -32,13 +35,13 @@ public class UserServiceImpl implements UserService{
         if (opt.isPresent()) {
             throw new HmsException(ErrorCode.USER_ALREADY_EXISTS);
         }
-        userDTO.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+        
+        // Use BcryptUtil for Quarkus
+        userDTO.setPassword(BcryptUtil.bcryptHash(userDTO.getPassword()));
 
         if (userDTO.getRole().equals(Roles.DOCTOR)) {
-            // Nếu là Bác sĩ -> Trạng thái CHỜ DUYỆT
             userDTO.setStatus(UserStatus.PENDING);
         } else {
-            // Nếu là Bệnh nhân -> Trạng thái HOẠT ĐỘNG luôn
             userDTO.setStatus(UserStatus.ACTIVE);
         }
 
@@ -48,37 +51,34 @@ public class UserServiceImpl implements UserService{
         } else if (userDTO.getRole().equals(Roles.PATIENT)) {
             profileId = profileClient.addPatient(userDTO);
         }
-        System.out.println(profileId);
         userDTO.setProfileId(profileId);
-        userRepository.save(userDTO.toEntity());
+        userRepository.persist(userDTO.toEntity());
     }
 
     @Override
     public UserDTO loginUser(UserDTO userDTO) throws HmsException {
         User user = userRepository.findByEmail(userDTO.getEmail())
-                .orElseThrow(()->new HmsException(ErrorCode.EMAIL_NOT_FOUND));
-        if (!passwordEncoder.matches(userDTO.getPassword(), user.getPassword())) {
+                .orElseThrow(() -> new HmsException(ErrorCode.EMAIL_NOT_FOUND));
+        
+        if (!BcryptUtil.matches(userDTO.getPassword(), user.getPassword())) {
             throw new HmsException(ErrorCode.INVALID_CREDENTIALS);
         }
-        System.out.println("status "+user.getStatus());
+        
         log.info("status: {}", user.getStatus());
         if (UserStatus.PENDING.equals(user.getStatus())) {
-            // Lưu ý: Bạn cần chắc chắn đã thêm ACCOUNT_PENDING_APPROVAL vào Enum ErrorCode
-            // Nếu chưa có, tạm thời dùng throw new HmsException("Account is pending approval");
             throw new HmsException(ErrorCode.ACCOUNT_PENDING_APPROVAL);
         }
 
         if (UserStatus.LOCKED.equals(user.getStatus()) || UserStatus.REJECTED.equals(user.getStatus())) {
             throw new HmsException(ErrorCode.ACCOUNT_LOCKED);
         }
-//        user.setPassword(null);
         return user.toDTO();
     }
 
     @Override
     public UserDTO getUserById(Long id) throws HmsException {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new  HmsException(ErrorCode.USER_NOT_FOUND)).toDTO();
+        return userRepository.findByIdOptional(id)
+                .orElseThrow(() -> new HmsException(ErrorCode.USER_NOT_FOUND)).toDTO();
     }
 
     @Override
@@ -94,8 +94,7 @@ public class UserServiceImpl implements UserService{
 
     @Override
     public Long getProfile(Long id) {
-        User user = userRepository.findById(id).orElseThrow(() -> new HmsException(ErrorCode.USER_NOT_FOUND));
-        System.out.println("Checking profile for user: " + user.getEmail() + " | Role: " + user.getRole());
+        User user = userRepository.findByIdOptional(id).orElseThrow(() -> new HmsException(ErrorCode.USER_NOT_FOUND));
         if (user.getRole().equals(Roles.DOCTOR)) {
             return profileClient.getDoctor(user.getProfileId());
         } else if (user.getRole().equals(Roles.PATIENT)) {
@@ -115,20 +114,19 @@ public class UserServiceImpl implements UserService{
 
     @Override
     public void updateUserStatus(Long userId, UserStatus newStatus) throws HmsException {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdOptional(userId)
                 .orElseThrow(() -> new HmsException(ErrorCode.USER_NOT_FOUND));
 
         user.setStatus(newStatus);
-        userRepository.save(user);
-
         // (Tùy chọn) Gửi email thông báo cho bác sĩ tại đây:
         // notificationClient.sendApprovalEmail(user.getEmail());
+        userRepository.persist(user);
     }
 
     @Override
     public List<UserDTO> getPendingDoctors() {
-        // Bạn cần viết thêm method trong UserRepository: findByRoleAndStatus(Roles role, UserStatus status)
         return userRepository.findByRoleAndStatus(Roles.DOCTOR, UserStatus.PENDING)
                 .stream().map(User::toDTO).toList();
     }
 }
+

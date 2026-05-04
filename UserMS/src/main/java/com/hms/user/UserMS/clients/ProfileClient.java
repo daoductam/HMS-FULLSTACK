@@ -1,26 +1,31 @@
 package com.hms.user.UserMS.clients;
 
-
-import com.hms.user.UserMS.config.FeignClientInterceptor;
 import com.hms.user.UserMS.dto.UserDTO;
-import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import org.eclipse.microprofile.rest.client.annotation.ClientHeaderParam;
+import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
-@FeignClient(name = "ProfileMS", url = "${profilems.url}",
-        configuration = FeignClientInterceptor.class)
+@RegisterRestClient(configKey = "profile-api")
+@ClientHeaderParam(name = "X-Secret-Key", value = "SECRET")
 public interface ProfileClient {
-    @PostMapping("/profile/doctor/add")
-    Long addDoctor(@RequestBody UserDTO userDTO);
 
-    @PostMapping("/profile/patient/add")
-    Long addPatient(@RequestBody UserDTO userDTO);
+    @POST
+    @Path("/profile/doctor/add")
+    Long addDoctor(UserDTO userDTO);
 
-    @GetMapping("/profile/doctor/getProfileId/{id}")
-    Long getDoctor(@PathVariable("id") Long id);
+    @POST
+    @Path("/profile/patient/add")
+    Long addPatient(UserDTO userDTO);
 
-    @GetMapping("/profile/patient/getProfileId/{id}")
-    Long getPatient(@PathVariable("id") Long id);
+    @GET
+    @Path("/profile/doctor/getProfileId/{id}")
+    Long getDoctor(@PathParam("id") Long id);
+
+    @GET
+    @Path("/profile/patient/getProfileId/{id}")
+    Long getPatient(@PathParam("id") Long id);
 }
+

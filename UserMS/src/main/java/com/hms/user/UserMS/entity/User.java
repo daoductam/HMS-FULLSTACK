@@ -26,8 +26,9 @@ public class User {
     String email;
     String password;
 
-//    @Enumerated(value = EnumType.STRING)
+    @Enumerated(value = EnumType.STRING)
     Roles role;
+
     Long profileId;
     @Column(updatable = false)
     LocalDateTime createdAt;
