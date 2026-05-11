@@ -1,22 +1,25 @@
 package com.hms.ProfileMS.repository;
 
 import com.hms.ProfileMS.dto.DoctorDropdown;
-import com.hms.ProfileMS.dto.MonthlyPatientDTO;
-import com.hms.ProfileMS.entity.Doctor;
 import com.hms.ProfileMS.entity.Patient;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.stereotype.Repository;
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.List;
 import java.util.Optional;
 
-@Repository
-public interface PatientRepository extends JpaRepository<Patient, Long> {
-    Optional<Patient> findByEmail(String email);
-    Optional<Patient> findByCCCD(String CCCD);
-    @Query("SELECT d.id AS id, d.name AS name FROM Patient d WHERE d.id in ?1")
-    List<DoctorDropdown> findAllPatientDropdownsByIds(List<Long> ids);
+@ApplicationScoped
+public class PatientRepository implements PanacheRepository<Patient> {
+    
+    public Optional<Patient> findByEmail(String email) {
+        return find("email", email).firstResultOptional();
+    }
 
+    public Optional<Patient> findByCCCD(String CCCD) {
+        return find("CCCD", CCCD).firstResultOptional();
+    }
 
+    public List<DoctorDropdown> findAllPatientDropdownsByIds(List<Long> ids) {
+        return find("id in ?1", ids).project(DoctorDropdown.class).list();
+    }
 }

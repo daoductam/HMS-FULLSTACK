@@ -6,45 +6,30 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
 @Entity
+@Table(name = "media_files")
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class MediaFile {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private  String name;
+    private String name;
     private String type;
     private Long size;
+
     @Lob
+    @Column(length = 10000000)
     private byte[] data;
+
+    @Enumerated(EnumType.STRING)
     private Storage storage;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
-
-//    public MediaFile setName(String name) {
-//        this.name = name;
-//        return this;
-//    }
-//
-//    public MediaFile setType(String type) {
-//        this.type = type;
-//        return this;
-//    }
-//
-//    public MediaFile build() {
-//        return this;
-//    }
-//
-//    public  void getObj() {
-//        MediaFile.builder()
-//                .name("Jdjd")
-//                .type("image/png")
-//                .build();
-//    }
 }

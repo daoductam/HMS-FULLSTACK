@@ -1,63 +1,48 @@
 package com.hms.ProfileMS.exception;
 
-
-
 import com.hms.ProfileMS.dto.BaseResponse;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.ObjectError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
-
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.ExceptionMapper;
+import jakarta.ws.rs.ext.Provider;
 import java.util.stream.Collectors;
 
-@RestControllerAdvice
-public class GlobalExceptionHandler {
+@Provider
+public class GlobalExceptionHandler implements ExceptionMapper<Exception> {
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Object> handleAllException(Exception exception) {
-        return ResponseEntity.badRequest().body(
+    @Override
+    public Response toResponse(Exception exception) {
+        if (exception instanceof HmsException hmsException) {
+            return Response
+                    .status(hmsException.getErrorCode().getStatusCode())
+                    .entity(
+                            BaseResponse.builder()
+                                    .code(hmsException.getErrorCode().getCode())
+                                    .message(hmsException.getErrorCode().getMessage())
+                                    .build()
+                    ).build();
+        }
+
+        if (exception instanceof ConstraintViolationException cve) {
+            String errorMsg = cve.getConstraintViolations().stream()
+                    .map(ConstraintViolation::getMessage)
+                    .collect(Collectors.joining(","));
+            return Response
+                    .status(Response.Status.BAD_REQUEST)
+                    .entity(
+                            BaseResponse.builder()
+                                    .message(errorMsg)
+                                    .build()
+                    ).build();
+        }
+
+        // Default uncategorized exception
+        return Response.status(Response.Status.BAD_REQUEST).entity(
                 BaseResponse.builder()
                         .code(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode())
                         .message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage())
                         .build()
-        );
-    }
-
-    @ExceptionHandler(HmsException.class)
-    public ResponseEntity<Object> handleBusinessException(HmsException exception) {
-        return ResponseEntity
-                .status(exception.getErrorCode().getStatusCode())
-                .body(
-                        BaseResponse.builder()
-                                .code(exception.getErrorCode().getCode())
-                                .message(exception.getErrorCode().getMessage())
-                                .build()
-                );
-    }
-
-    @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})
-    public ResponseEntity<Object> handleValidationException(Exception e) {
-        String errorMsg;
-        if (e instanceof  MethodArgumentNotValidException manv) {
-            errorMsg = manv.getBindingResult().getAllErrors().stream()
-                    .map(ObjectError::getDefaultMessage).collect(Collectors.joining(","));
-
-        } else {
-            ConstraintViolationException cve = (ConstraintViolationException) e;
-            errorMsg = cve.getConstraintViolations().stream().map(ConstraintViolation::getMessage).collect(Collectors.joining(","));
-
-        }
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST.value())
-                .body(
-                        BaseResponse.builder()
-                                .message(errorMsg)
-                                .build()
-                );
-
+        ).build();
     }
 }

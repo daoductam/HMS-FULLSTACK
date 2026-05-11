@@ -1,46 +1,40 @@
 package com.hms.PaymentMS.service;
 
-import com.google.gson.Gson;
+import com.hms.PaymentMS.clients.MomoClient;
 import com.hms.PaymentMS.dto.MomoPaymentRequest;
-
 import com.hms.PaymentMS.utils.MomoSecurity;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 import java.util.Map;
 import java.util.UUID;
 
-@Service
-@RequiredArgsConstructor
+@ApplicationScoped
 public class PaymentServiceImpl implements PaymentService {
 
-    @Value("${momo.partner-code}")
-    private String partnerCode;
+    @ConfigProperty(name = "momo.partner-code")
+    String partnerCode;
 
-    @Value("${momo.access-key}")
-    private String accessKey;
+    @ConfigProperty(name = "momo.access-key")
+    String accessKey;
 
-    @Value("${momo.secret-key}")
-    private String secretKey;
+    @ConfigProperty(name = "momo.secret-key")
+    String secretKey;
 
-    @Value("${momo.endpoint}")
-    private String momoEndpoint;
+    @ConfigProperty(name = "momo.ipn-url")
+    String ipnUrl;
 
-    @Value("${momo.ipn-url}")
-    private String ipnUrl;
+    @ConfigProperty(name = "momo.redirect-url")
+    String redirectUrl;
 
-    @Value("${momo.redirect-url}")
-    private String redirectUrl;
+    @Inject
+    @RestClient
+    MomoClient momoClient;
 
     @Override
     public String createMomoPayment(String orderId, Double amountDouble, String orderInfo) {
-        RestTemplate restTemplate = new RestTemplate();
-
         // MoMo yêu cầu số tiền là Long (không thập phân) và String
         String amount = String.valueOf(amountDouble.longValue());
         String requestId = UUID.randomUUID().toString();
@@ -78,22 +72,13 @@ public class PaymentServiceImpl implements PaymentService {
                 .signature(signature)
                 .build();
 
-        // 4. Gửi Request sang MoMo
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<MomoPaymentRequest> entity = new HttpEntity<>(requestBody, headers);
-
+        // 4. Gửi Request sang MoMo qua RestClient
         try {
-            // MoMo trả về JSON có chứa field "payUrl"
-            String response = restTemplate.postForObject(momoEndpoint, entity, String.class);
-
-            // Parse JSON để lấy payUrl (Dùng Gson hoặc Jackson)
-            @SuppressWarnings("unchecked")
-            Map<String, Object> map = new Gson().fromJson(response, Map.class);
-            return map.get("payUrl").toString(); // Trả về link thanh toán
+            Map<String, Object> response = momoClient.createPayment(requestBody);
+            return response.get("payUrl").toString(); // Trả về link thanh toán
         } catch (Exception e) {
             e.printStackTrace();
-            throw new RuntimeException("Lỗi khi gọi MoMo API");
+            throw new RuntimeException("Lỗi khi gọi MoMo API: " + e.getMessage());
         }
     }
 }

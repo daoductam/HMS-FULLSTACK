@@ -1,20 +1,22 @@
 package com.hms.appointment.Appointment.config;
 
 import com.hms.appointment.Appointment.service.ScheduleService;
-import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import io.quarkus.runtime.Startup;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
-@Component
-@RequiredArgsConstructor
+@ApplicationScoped
 public class ScheduleInitializer {
-    private final ScheduleService scheduleService;
+    
+    @Inject
+    ScheduleService scheduleService;
 
-    @PostConstruct
+    @Startup
     public void init() {
         // Khởi tạo ca làm việc mặc định khi ứng dụng khởi động
         scheduleService.initializeDefaultShifts();
     }
 }
+
 
 

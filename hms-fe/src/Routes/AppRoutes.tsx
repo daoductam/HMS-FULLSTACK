@@ -23,9 +23,6 @@ import DoctorDashboardPage from "../Pages/Doctor/DoctorDashboardPage";
 import PatientDashboardPage from "../Pages/Patient/PatientDashboardPage";
 import DoctorPatientPage from "../Pages/Doctor/DoctorPatientPage";
 import DoctorPharmacyPage from "../Pages/Doctor/DoctorPharmacyPage";
-import AdminCommunityPage from "../Pages/Admin/AdminCommunityPage";
-import PatientCommunityPage from "../Pages/Patient/PatientCommunityPage";
-import DoctorCommunityPage from "../Pages/Doctor/DoctorCommunityPage";
 import AdminEditPatientPage from "../Pages/Admin/AdminEditPatientPage";
 import AdminEditDoctorProfile from "../Components/Admin/Doctors/AdminEditDoctorProfile";
 import AdminEditDoctorPage from "../Pages/Admin/AdminEditDoctorPage";
@@ -94,7 +91,6 @@ const AppRoutes = () => {
             element={<AdminEditDoctorPage />}
           />
           <Route path="schedule" element={<AdminSchedulePage />} />
-          <Route path="community" element={<AdminCommunityPage />} />
         </Route>
 
         <Route
@@ -109,7 +105,6 @@ const AppRoutes = () => {
           <Route path="profile" element={<PatientProfilePage />} />
           <Route path="doctors" element={<PatientDoctorPage />} />
           <Route path="appointments" element={<PatientAppointmentPage />} />
-          <Route path="community" element={<PatientCommunityPage />} />
         </Route>
 
         <Route
@@ -129,7 +124,6 @@ const AppRoutes = () => {
           />
           <Route path="pharmacy" element={<DoctorPharmacyPage />} />
           <Route path="patients" element={<DoctorPatientPage />} />
-          <Route path="community" element={<DoctorCommunityPage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

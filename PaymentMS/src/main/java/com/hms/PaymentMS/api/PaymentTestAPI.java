@@ -3,11 +3,14 @@ package com.hms.PaymentMS.api;
 import com.hms.PaymentMS.entity.PaymentTransaction;
 import com.hms.PaymentMS.repository.PaymentTransactionRepository;
 import com.hms.hms_common.event.PaymentSuccessEvent;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.web.bind.annotation.*;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import lombok.extern.slf4j.Slf4j;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,28 +19,33 @@ import java.util.Map;
  * Test API để simulate MoMo callback cho testing
  * CHỈ DÙNG CHO MÔI TRƯỜNG TEST/DEVELOPMENT
  */
-@RestController
-@RequestMapping("/payment/test")
-@RequiredArgsConstructor
+@Path("/payment/test")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+@Slf4j
 public class PaymentTestAPI {
 
-    @Autowired
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    @Inject
+    @Channel("payment-success-out")
+    Emitter<PaymentSuccessEvent> paymentEmitter;
     
-    private final PaymentTransactionRepository paymentTransactionRepository;
+    @Inject
+    PaymentTransactionRepository paymentTransactionRepository;
 
     /**
      * Simulate MoMo callback thành công
      * POST /payment/test/simulate-callback
      * Body: { "orderId": "SALE-123", "amount": 100000 }
      */
-    @PostMapping("/simulate-callback")
-    public ResponseEntity<Map<String, String>> simulateCallback(@RequestBody Map<String, Object> request) {
+    @POST
+    @Path("/simulate-callback")
+    @Transactional
+    public Response simulateCallback(Map<String, Object> request) {
         String orderId = request.get("orderId").toString();
         Long amount = Long.valueOf(request.get("amount").toString());
         String transId = "TEST-TRANS-" + System.currentTimeMillis();
 
-        System.out.println("🧪 TEST: Simulating payment success for order: " + orderId);
+        log.info("🧪 TEST: Simulating payment success for order: {}", orderId);
 
         // Xác định nguồn thanh toán
         String paymentSource = "PHARMACY";
@@ -58,8 +66,8 @@ public class PaymentTestAPI {
 
         transaction.setTransactionId(transId);
         transaction.setStatus("SUCCESS");
-        paymentTransactionRepository.save(transaction);
-        System.out.println("💾 TEST: Đã lưu payment transaction vào database: " + transaction.getId());
+        paymentTransactionRepository.persist(transaction);
+        log.info("💾 TEST: Đã lưu payment transaction vào database: {}", transaction.getId());
 
         // Tạo PaymentSuccessEvent
         PaymentSuccessEvent event = new PaymentSuccessEvent();
@@ -69,8 +77,8 @@ public class PaymentTestAPI {
         event.setPaymentSource(paymentSource);
 
         // Gửi message vào topic "payment_success_topic"
-        kafkaTemplate.send("payment_success_topic", event);
-        System.out.println("✅ TEST: Đã gửi event thanh toán thành công: " + event);
+        paymentEmitter.send(event);
+        log.info("✅ TEST: Đã gửi event thanh toán thành công: {}", event);
 
         Map<String, String> response = new HashMap<>();
         response.put("status", "success");
@@ -78,7 +86,6 @@ public class PaymentTestAPI {
         response.put("orderId", orderId);
         response.put("transactionId", transId);
 
-        return ResponseEntity.ok(response);
+        return Response.ok(response).build();
     }
 }
-

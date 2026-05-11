@@ -44,4 +44,16 @@ public class Appointment {
                 .build();
     }
 
+    public com.hms.appointment.Appointment.dto.AppointmentDetails toDetails() {
+        return com.hms.appointment.Appointment.dto.AppointmentDetails.builder()
+                .id(this.id)
+                .patientId(this.patientId)
+                .doctorId(this.doctorId)
+                .appointmentTime(this.appointmentTime)
+                .status(this.status)
+                .reason(this.reason)
+                .notes(this.notes)
+                .build();
+    }
+
 }

@@ -1,14 +1,18 @@
 package com.hms.PaymentMS.repository;
 
 import com.hms.PaymentMS.entity.PaymentTransaction;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.Optional;
 
-@Repository
-public interface PaymentTransactionRepository extends JpaRepository<PaymentTransaction, Long> {
-    Optional<PaymentTransaction> findByOrderId(String orderId);
-    Optional<PaymentTransaction> findByTransactionId(String transactionId);
-}
+@ApplicationScoped
+public class PaymentTransactionRepository implements PanacheRepository<PaymentTransaction> {
+    public Optional<PaymentTransaction> findByOrderId(String orderId) {
+        return find("orderId", orderId).firstResultOptional();
+    }
 
+    public Optional<PaymentTransaction> findByTransactionId(String transactionId) {
+        return find("transactionId", transactionId).firstResultOptional();
+    }
+}

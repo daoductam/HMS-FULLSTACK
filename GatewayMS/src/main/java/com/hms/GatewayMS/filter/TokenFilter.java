@@ -2,63 +2,73 @@ package com.hms.GatewayMS.filter;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import org.springframework.cloud.gateway.filter.GatewayFilter;
-import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Component;
+import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.Priority;
+import jakarta.ws.rs.Priorities;
+import jakarta.ws.rs.container.ContainerRequestContext;
+import jakarta.ws.rs.container.ContainerRequestFilter;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.Provider;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
-@Component
-public class TokenFilter extends AbstractGatewayFilterFactory<TokenFilter.Config> {
+@Provider
+@Priority(Priorities.AUTHENTICATION)
+public class TokenFilter implements ContainerRequestFilter {
+
     private static final String SECRET =
             "6980396a36a308bfc93d146548bddc4ba36e51e0302fe8328a1df49e8ac46ae670d0cb933e2f939ef16c674088b1bd64e07ae0c866877528a841521df93b31f2";
-    public TokenFilter() {
-        super(Config.class);
-    }
 
     @Override
-    public GatewayFilter apply(Config config) {
-        return ((exchange, chain) -> {
-            String path = exchange.getRequest().getPath().toString();
-            if (path.equals("/user/login") || path.equals("/user/register") 
-                || path.contains("/pharmacy/payment") 
-                || path.contains("/payment/ipn-callback")
-                || path.contains("/payment/test")) {
-                return chain.filter(exchange.mutate().request(r -> r.header(
-                        "X-Secret-Key", "SECRET")).build());
-            }
-            HttpHeaders header = exchange.getRequest().getHeaders();
-            if (!header.containsKey(HttpHeaders.AUTHORIZATION)) {
-                throw new RuntimeException("Authorization header is missing");
-            }
-            String authHeader = header.getFirst(HttpHeaders.AUTHORIZATION);
-            if (authHeader==null || !authHeader.startsWith("Bearer ")) {
-                throw new RuntimeException("Authorization header is invalid");
-            }
-            String token=authHeader.substring(7);
-            try {
-                Claims claims = Jwts.parser().setSigningKey(SECRET).parseClaimsJws(token).getBody();
-                String role = claims.get("role", String.class);
-                Long profileId = claims.get("profileId", Long.class);
-                exchange = exchange.mutate().request(r -> r.header(
-                        "X-Secret-Key", "SECRET")).build();
+    public void filter(ContainerRequestContext requestContext) throws IOException {
+        String path = requestContext.getUriInfo().getPath();
 
-//                String role = claims.get("role", String.class);
-//                Long profileId = claims.get("profileId", Long.class);
-//                exchange = exchange.mutate().request(r -> r
-//                        .header("X-Secret-Key", "SECRET")
-//                        .header("X-User-Role", role) // Gửi Role
-//                        .header("X-Profile-Id", String.valueOf(profileId)) // Gửi Profile ID
-//                ).build();
-            } catch (Exception e ) {
-                throw new RuntimeException("Token is invalid");
+        // Bypass security for specific paths
+        if (path.equals("user/login") || path.equals("/user/login")
+                || path.equals("user/register") || path.equals("/user/register")
+                || path.contains("pharmacy/payment")
+                || path.contains("payment/ipn-callback")
+                || path.contains("payment/test")) {
+            requestContext.getHeaders().add("X-Secret-Key", "SECRET");
+            return;
+        }
+
+        String authHeader = requestContext.getHeaderString("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("Authorization header is missing or invalid")
+                    .build());
+            return;
+        }
+
+        String token = authHeader.substring(7);
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            
+            // Inject headers for internal microservices
+            requestContext.getHeaders().add("X-Secret-Key", "SECRET");
+            
+            Object roleObj = claims.get("role");
+            Object profileIdObj = claims.get("profileId");
+            
+            if (roleObj != null) {
+                System.out.println("Adding X-User-Role: " + roleObj.toString());
+                requestContext.getHeaders().add("X-User-Role", roleObj.toString());
             }
-            return chain.filter(exchange);
-        });
-    }
+            if (profileIdObj != null) {
+                System.out.println("Adding X-Profile-Id: " + profileIdObj.toString());
+                requestContext.getHeaders().add("X-Profile-Id", profileIdObj.toString());
+            }
 
-
-    public static class Config{
-
+        } catch (Exception e) {
+            e.printStackTrace(); // In lỗi cụ thể ra console Gateway
+            requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("Token is invalid: " + e.getMessage())
+                    .build());
+        }
     }
 }

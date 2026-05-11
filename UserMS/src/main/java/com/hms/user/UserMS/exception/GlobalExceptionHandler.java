@@ -24,10 +24,11 @@ public class GlobalExceptionHandler implements ExceptionMapper<Exception> {
     }
 
     private Response handleAllException(Exception exception) {
-        return Response.status(Response.Status.BAD_REQUEST).entity(
+        exception.printStackTrace(); // In lỗi ra console để debug
+        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(
                 BaseResponse.builder()
                         .code(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode())
-                        .message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage())
+                        .message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage() + ": " + exception.getMessage())
                         .build()
         ).build();
     }

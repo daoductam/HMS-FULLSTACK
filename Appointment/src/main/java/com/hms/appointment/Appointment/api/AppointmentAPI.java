@@ -3,112 +3,113 @@ package com.hms.appointment.Appointment.api;
 import com.hms.appointment.Appointment.dto.*;
 import com.hms.appointment.Appointment.service.AppointmentService;
 import com.hms.appointment.Appointment.service.PrescriptionService;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@RestController
-@RequestMapping("/appointment")
-@CrossOrigin
-@Validated
+@Path("/appointment")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 @RequiredArgsConstructor
 public class AppointmentAPI {
 
     private final AppointmentService appointmentService;
     private final PrescriptionService prescriptionService;
 
-    @PostMapping("/schedule")
-    public ResponseEntity<Long> scheduleAppointment(@RequestBody AppointmentDTO appointmentDTO)  {
-        return new ResponseEntity<>(appointmentService.scheduleAppointment(appointmentDTO),
-                HttpStatus.CREATED);
-
+    @POST
+    @Path("/schedule")
+    public Response scheduleAppointment(AppointmentDTO appointmentDTO)  {
+        return Response.status(Response.Status.CREATED)
+                .entity(appointmentService.scheduleAppointment(appointmentDTO))
+                .build();
     }
 
-    @GetMapping("/get/{appointmentId}")
-    public ResponseEntity<AppointmentDTO> getAppointmentDetails(@PathVariable Long appointmentId){
-        return new ResponseEntity<>(appointmentService.getAppointmentDetails(appointmentId), HttpStatus.OK);
-
+    @GET
+    @Path("/get/{appointmentId}")
+    public Response getAppointmentDetails(@PathParam("appointmentId") Long appointmentId){
+        return Response.ok(appointmentService.getAppointmentDetails(appointmentId)).build();
     }
 
-    @PutMapping("/cancel/{appointmentId}")
-    public ResponseEntity<String> cancelAppointment(@PathVariable Long appointmentId){
+    @PUT
+    @Path("/cancel/{appointmentId}")
+    public Response cancelAppointment(@PathParam("appointmentId") Long appointmentId){
         appointmentService.cancelAppointment(appointmentId);
-        return new ResponseEntity<>("Cuộc hẹn đã hủy",HttpStatus.OK);
+        return Response.ok("Cuộc hẹn đã hủy").build();
     }
 
-    @GetMapping("/get/details/{appointmentId}")
-    public ResponseEntity<AppointmentDetails> getAppointmentDetailsWithName(@PathVariable Long appointmentId){
-        return new ResponseEntity<>(appointmentService.getAppointmentDetailsWithName(appointmentId), HttpStatus.OK);
-
+    @GET
+    @Path("/get/details/{appointmentId}")
+    public Response getAppointmentDetailsWithName(@PathParam("appointmentId") Long appointmentId){
+        return Response.ok(appointmentService.getAppointmentDetailsWithName(appointmentId)).build();
     }
 
-    @GetMapping("/getAllByPatient/{patientId}")
-    public ResponseEntity<List<AppointmentDetails>> getAllAppointmentsByPatientId(@PathVariable Long patientId) {
-        return new ResponseEntity<>(appointmentService.getAllAppointmentDetailsByPatientId(patientId),
-                HttpStatus.OK);
+    @GET
+    @Path("/getAllByPatient/{patientId}")
+    public Response getAllAppointmentsByPatientId(@PathParam("patientId") Long patientId) {
+        return Response.ok(appointmentService.getAllAppointmentDetailsByPatientId(patientId)).build();
     }
 
-    @GetMapping("/getAllByDoctor/{doctorId}")
-    public ResponseEntity<List<AppointmentDetails>> getAllAppointmentsByDoctorId(@PathVariable Long doctorId) {
-        return new ResponseEntity<>(appointmentService.getAllAppointmentDetailsByDoctorId(doctorId),
-                HttpStatus.OK);
+    @GET
+    @Path("/getAllByDoctor/{doctorId}")
+    public Response getAllAppointmentsByDoctorId(@PathParam("doctorId") Long doctorId) {
+        return Response.ok(appointmentService.getAllAppointmentDetailsByDoctorId(doctorId)).build();
     }
 
-    @GetMapping("/countByPatient/{patientId}")
-    public ResponseEntity<List<MonthlyVisitDTO>> getAppointmentCountByPatientId(@PathVariable Long patientId) {
-        return new ResponseEntity<>(appointmentService.getAppointmentCountByPatient(patientId),
-                HttpStatus.OK);
+    @GET
+    @Path("/countByPatient/{patientId}")
+    public Response getAppointmentCountByPatientId(@PathParam("patientId") Long patientId) {
+        return Response.ok(appointmentService.getAppointmentCountByPatient(patientId)).build();
     }
 
-    @GetMapping("/countByDoctor/{doctorId}")
-    public ResponseEntity<List<MonthlyVisitDTO>> getAppointmentCountByDoctorId(@PathVariable Long doctorId) {
-        return new ResponseEntity<>(appointmentService.getAppointmentCountByDoctor(doctorId),
-                HttpStatus.OK);
+    @GET
+    @Path("/countByDoctor/{doctorId}")
+    public Response getAppointmentCountByDoctorId(@PathParam("doctorId") Long doctorId) {
+        return Response.ok(appointmentService.getAppointmentCountByDoctor(doctorId)).build();
     }
 
-    @GetMapping("/countPatientsByDoctor/{doctorId}")
-    public ResponseEntity<List<MonthlyVisitDTO>> getPatientCountByDoctorId(@PathVariable Long doctorId) {
-        return new ResponseEntity<>(appointmentService.getPatientCountByDoctor(doctorId),
-                HttpStatus.OK);
+    @GET
+    @Path("/countPatientsByDoctor/{doctorId}")
+    public Response getPatientCountByDoctorId(@PathParam("doctorId") Long doctorId) {
+        return Response.ok(appointmentService.getPatientCountByDoctor(doctorId)).build();
     }
 
-    @GetMapping("/visitCount")
-    public ResponseEntity<List<MonthlyVisitDTO>> getAppointmentCount() {
-        return new ResponseEntity<>(appointmentService.getAppointmentCount(),
-                HttpStatus.OK);
+    @GET
+    @Path("/visitCount")
+    public Response getAppointmentCount() {
+        return Response.ok(appointmentService.getAppointmentCount()).build();
     }
 
-    @GetMapping("/countReasonsByPatient/{patientId}")
-    public ResponseEntity<List<ReasonCountDTO>> getReasonsByPatient(@PathVariable Long patientId) {
-        return new ResponseEntity<>(appointmentService.getReasonCountByPatient(patientId),
-                HttpStatus.OK);
+    @GET
+    @Path("/countReasonsByPatient/{patientId}")
+    public Response getReasonsByPatient(@PathParam("patientId") Long patientId) {
+        return Response.ok(appointmentService.getReasonCountByPatient(patientId)).build();
     }
 
-    @GetMapping("/countReasonsByDoctor/{doctorId}")
-    public ResponseEntity<List<ReasonCountDTO>> getReasonsByDoctor(@PathVariable Long doctorId) {
-        return new ResponseEntity<>(appointmentService.getReasonCountByDoctor(doctorId),
-                HttpStatus.OK);
+    @GET
+    @Path("/countReasonsByDoctor/{doctorId}")
+    public Response getReasonsByDoctor(@PathParam("doctorId") Long doctorId) {
+        return Response.ok(appointmentService.getReasonCountByDoctor(doctorId)).build();
     }
 
-    @GetMapping("/countReasons")
-    public ResponseEntity<List<ReasonCountDTO>> getReasons() {
-        return new ResponseEntity<>(appointmentService.getReasonCount(),
-                HttpStatus.OK);
+    @GET
+    @Path("/countReasons")
+    public Response getReasons() {
+        return Response.ok(appointmentService.getReasonCount()).build();
     }
 
-    @GetMapping("/getMedicinesByPatient/{patientId}")
-    public ResponseEntity<List<MedicineDTO>> getMedicinesByPatientId(@PathVariable Long patientId) {
-        return new ResponseEntity<>(prescriptionService.getMedicineByPatientId(patientId),
-                HttpStatus.OK);
+    @GET
+    @Path("/getMedicinesByPatient/{patientId}")
+    public Response getMedicinesByPatientId(@PathParam("patientId") Long patientId) {
+        return Response.ok(prescriptionService.getMedicineByPatientId(patientId)).build();
     }
 
-    @GetMapping("/today")
-    public ResponseEntity<List<AppointmentDetails>> getTodaysAppointment() {
-        return new ResponseEntity<>(appointmentService.getTodaysAppointment(),
-                HttpStatus.OK);
+    @GET
+    @Path("/today")
+    public Response getTodaysAppointment() {
+        return Response.ok(appointmentService.getTodaysAppointment()).build();
     }
 }
+

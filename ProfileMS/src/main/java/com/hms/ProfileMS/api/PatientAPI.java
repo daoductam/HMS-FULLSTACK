@@ -4,79 +4,77 @@ import com.hms.ProfileMS.dto.DoctorDropdown;
 import com.hms.ProfileMS.dto.PageResponse;
 import com.hms.ProfileMS.dto.PatientDTO;
 import com.hms.ProfileMS.service.PatientService;
-
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@RestController
-@RequestMapping("/profile/patient")
-@CrossOrigin
-@Validated
+@Path("/profile/patient")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 @RequiredArgsConstructor
 public class PatientAPI {
 
     private final PatientService patientService;
 
-    @PostMapping("/add")
-    public ResponseEntity<Long> addUser(@RequestBody PatientDTO patientDTO)  {
-        return new ResponseEntity<>(patientService.addPatient(patientDTO),
-                HttpStatus.CREATED);
-
+    @POST
+    @Path("/add")
+    public Response addUser(PatientDTO patientDTO)  {
+        return Response.status(Response.Status.CREATED)
+                .entity(patientService.addPatient(patientDTO))
+                .build();
     }
 
-    @GetMapping("/get/{id}")
-    public ResponseEntity<PatientDTO> getPatientById(@PathVariable Long id){
-        return new ResponseEntity<>(patientService.getPatientById(id), HttpStatus.OK);
-
+    @GET
+    @Path("/get/{id}")
+    public Response getPatientById(@PathParam("id") Long id){
+        return Response.ok(patientService.getPatientById(id)).build();
     }
 
-    @GetMapping("/getProfileId/{id}")
-    public ResponseEntity<Long> getProfileId(@PathVariable Long id){
-        return new ResponseEntity<>(patientService.getPatientById(id).getProfilePictureId(), HttpStatus.OK);
-
+    @GET
+    @Path("/getProfileId/{id}")
+    public Response getProfileId(@PathParam("id") Long id){
+        return Response.ok(patientService.getPatientById(id).getProfilePictureId()).build();
     }
 
-    @PutMapping("/update")
-    public ResponseEntity<PatientDTO> updatePatient(@RequestBody PatientDTO patientDTO){
-        return new ResponseEntity<>(patientService.updatePatient(patientDTO), HttpStatus.OK);
-
+    @PUT
+    @Path("/update")
+    public Response updatePatient(PatientDTO patientDTO){
+        return Response.ok(patientService.updatePatient(patientDTO)).build();
     }
 
-    @GetMapping("/exists/{id}")
-    public ResponseEntity<Boolean> patientExists(@PathVariable Long id){
-        return new ResponseEntity<>(patientService.patientExists(id), HttpStatus.OK);
-
+    @GET
+    @Path("/exists/{id}")
+    public Response patientExists(@PathParam("id") Long id){
+        return Response.ok(patientService.patientExists(id)).build();
     }
 
-    @GetMapping("/getAll")
-    public ResponseEntity<List<PatientDTO>> getAllPatients() {
-        return new ResponseEntity<>(patientService.getAllPatients(),
-                HttpStatus.OK);
+    @GET
+    @Path("/getAll")
+    public Response getAllPatients() {
+        return Response.ok(patientService.getAllPatients()).build();
     }
 
-    @GetMapping("/getAllPaginated")
-    public ResponseEntity<PageResponse<PatientDTO>> getAllPatientsPaginated(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return new ResponseEntity<>(patientService.getAllPatientsPaginated(page, size),
-                HttpStatus.OK);
+    @GET
+    @Path("/getAllPaginated")
+    public Response getAllPatientsPaginated(
+            @QueryParam("page") @DefaultValue("0") int page,
+            @QueryParam("size") @DefaultValue("10") int size) {
+        return Response.ok(patientService.getAllPatientsPaginated(page, size)).build();
     }
 
-    @GetMapping("/getPatientsById")
-    public ResponseEntity<List<DoctorDropdown>> getPatientsById(@RequestParam List<Long> ids) {
-        return new ResponseEntity<>(patientService.getPatientsById(ids),
-                HttpStatus.OK);
+    @GET
+    @Path("/getPatientsById")
+    public Response getPatientsById(@QueryParam("ids") List<Long> ids) {
+        return Response.ok(patientService.getPatientsById(ids)).build();
     }
 
-    @PostMapping("/listByIds")
-    public ResponseEntity<List<PatientDTO>> getPatientsByIds(@RequestBody List<Long> ids) {
+    @POST
+    @Path("/listByIds")
+    public Response getPatientsByIds(List<Long> ids) {
         List<PatientDTO> patients = patientService.findAllByIds(ids);
-        return ResponseEntity.ok(patients);
+        return Response.ok(patients).build();
     }
-
 }

@@ -6,30 +6,37 @@ import com.hms.appointment.Appointment.entity.Prescription;
 import com.hms.appointment.Appointment.exception.ErrorCode;
 import com.hms.appointment.Appointment.exception.HmsException;
 import com.hms.appointment.Appointment.repository.PrescriptionRepository;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Service
+@ApplicationScoped
 @RequiredArgsConstructor
 @Transactional
 @Slf4j
-public class PrescriptionServiceImpl implements PrescriptionService{
+public class PrescriptionServiceImpl implements PrescriptionService {
     private final PrescriptionRepository prescriptionRepository;
     private final MedicineService medicineService;
-    private final ProfileClient profileClient;
+    
+    @Inject
+    @RestClient
+    ProfileClient profileClient;
 
     @Override
     public Long savePrescription(PrescriptionDTO request) {
         request.setPrescriptionDate(LocalDate.now());
-        Long prescriptionId =
-                prescriptionRepository.save(request.toEntity()).getId();
+        Prescription prescription = request.toEntity();
+        prescriptionRepository.persist(prescription);
+        
+        Long prescriptionId = prescription.getId();
         request.getMedicines().forEach(medicine -> {
             medicine.setPrescriptionId(prescriptionId);
         });
@@ -39,8 +46,7 @@ public class PrescriptionServiceImpl implements PrescriptionService{
 
     @Override
     public PrescriptionDTO getPrescriptionByAppointmentId(Long appointmentId) {
-        PrescriptionDTO prescriptionDTO =
-                prescriptionRepository.findByAppointment_Id(appointmentId)
+        PrescriptionDTO prescriptionDTO = prescriptionRepository.findByAppointment_Id(appointmentId)
                         .orElseThrow(() -> new HmsException(ErrorCode.PRESCRIPTION_NOT_FOUND)).toDTO();
         prescriptionDTO.setMedicines(medicineService.getAllMedicinesByPrescriptionId(prescriptionDTO.getId()));
         return prescriptionDTO;
@@ -48,7 +54,7 @@ public class PrescriptionServiceImpl implements PrescriptionService{
 
     @Override
     public PrescriptionDTO getPrescriptionById(Long prescriptionId) {
-        PrescriptionDTO dto = prescriptionRepository.findById(prescriptionId)
+        PrescriptionDTO dto = prescriptionRepository.findByIdOptional(prescriptionId)
                 .orElseThrow(() -> new HmsException(ErrorCode.PRESCRIPTION_NOT_FOUND)).toDTO();
         dto.setMedicines(medicineService.getAllMedicinesByPrescriptionId(dto.getId()));
         return dto;
@@ -56,8 +62,7 @@ public class PrescriptionServiceImpl implements PrescriptionService{
 
     @Override
     public List<PrescriptionDetails> getPrescriptionByPatientId(Long patientId) {
-        List<Prescription> prescriptions=
-                prescriptionRepository.findAllByPatientId(patientId);
+        List<Prescription> prescriptions = prescriptionRepository.findAllByPatientId(patientId);
 
         List<PrescriptionDetails> prescriptionDetails = prescriptions.stream()
                 .map(Prescription::toDetails)
@@ -70,56 +75,62 @@ public class PrescriptionServiceImpl implements PrescriptionService{
         List<Long> doctorIds = prescriptionDetails.stream()
                 .map(PrescriptionDetails::getDoctorId)
                 .distinct().toList();
-        List<DoctorName> doctorNames = profileClient.getDoctorsById(doctorIds);
-        Map<Long, String> doctorMap = doctorNames.stream()
-                .collect(Collectors.toMap(DoctorName::getId, DoctorName::getName));
-        prescriptionDetails.forEach(details -> {
-            String doctorName =  doctorMap.get(details.getDoctorId());
-            if (doctorName != null) {
-                details.setDoctorName(doctorName);
-            } else {
-                details.setDoctorName("Unknown Doctor");
-            }
-        });
+        
+        if (!doctorIds.isEmpty()) {
+            List<DoctorName> doctorNames = profileClient.getDoctorsById(doctorIds);
+            Map<Long, String> doctorMap = doctorNames.stream()
+                    .collect(Collectors.toMap(DoctorName::getId, DoctorName::getName));
+            
+            prescriptionDetails.forEach(details -> {
+                String doctorName = doctorMap.get(details.getDoctorId());
+                details.setDoctorName(doctorName != null ? doctorName : "Unknown Doctor");
+            });
+        }
+        
         return prescriptionDetails;
     }
 
     @Override
     public List<PrescriptionDetails> getPrescriptions() {
-        List<Prescription> prescriptions=
-                prescriptionRepository.findAll();
+        List<Prescription> prescriptions = prescriptionRepository.listAll();
+        
         List<PrescriptionDetails> prescriptionDetails = prescriptions.stream()
                 .map(Prescription::toDetails)
                 .toList();
+        
         prescriptionDetails.forEach(details -> {
             details.setMedicines(medicineService.getAllMedicinesByPrescriptionId(details.getId()));
         });
+        
         List<Long> doctorIds = prescriptionDetails.stream()
                 .map(PrescriptionDetails::getDoctorId)
                 .distinct().toList();
         List<Long> patientIds = prescriptionDetails.stream()
                 .map(PrescriptionDetails::getPatientId)
                 .distinct().toList();
-        List<DoctorName> doctorNames = profileClient.getDoctorsById(doctorIds);
-        List<DoctorName> patientNames = profileClient.getPatientsById(patientIds);
-        Map<Long, String> doctorMap = doctorNames.stream()
-                .collect(Collectors.toMap(DoctorName::getId, DoctorName::getName));
-        Map<Long, String> patientMap = patientNames.stream()
-                .collect(Collectors.toMap(DoctorName::getId, DoctorName::getName));
-        prescriptionDetails.forEach(details -> {
-            String doctorName =  doctorMap.get(details.getDoctorId());
-            String patientName =  patientMap.get(details.getPatientId());
-            if (doctorName != null) {
-                details.setDoctorName(doctorName);
-            } else {
-                details.setDoctorName("Unknown Doctor");
-            }
-            if (patientName != null) {
-                details.setPatientName(patientName);
-            } else {
-                details.setPatientName("Unknown Patient");
-            }
-        });
+        
+        if (!doctorIds.isEmpty()) {
+            List<DoctorName> doctorNames = profileClient.getDoctorsById(doctorIds);
+            Map<Long, String> doctorMap = doctorNames.stream()
+                    .collect(Collectors.toMap(DoctorName::getId, DoctorName::getName));
+            
+            prescriptionDetails.forEach(details -> {
+                String doctorName = doctorMap.get(details.getDoctorId());
+                details.setDoctorName(doctorName != null ? doctorName : "Unknown Doctor");
+            });
+        }
+        
+        if (!patientIds.isEmpty()) {
+            List<DoctorName> patientNames = profileClient.getPatientsById(patientIds);
+            Map<Long, String> patientMap = patientNames.stream()
+                    .collect(Collectors.toMap(DoctorName::getId, DoctorName::getName));
+            
+            prescriptionDetails.forEach(details -> {
+                String patientName = patientMap.get(details.getPatientId());
+                details.setPatientName(patientName != null ? patientName : "Unknown Patient");
+            });
+        }
+        
         return prescriptionDetails;
     }
 
@@ -129,3 +140,4 @@ public class PrescriptionServiceImpl implements PrescriptionService{
         return medicineService.getMedicinesByPrescriptionIds(pIds);
     }
 }
+

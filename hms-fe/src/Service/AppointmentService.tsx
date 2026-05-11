@@ -220,7 +220,7 @@ const countAllReasons = async () => {
 // --- Schedule Services ---
 
 const createSchedule = async (data: any) => {
-  const ENDPOINT = "/appointment/schedule/create";
+  const ENDPOINT = "/appointment/doctor-schedule/create";
   return axiosInstance
     .post(ENDPOINT, data)
     .then((response: any) => response.data)
@@ -230,7 +230,7 @@ const createSchedule = async (data: any) => {
 };
 
 const lockSchedule = async (data: any) => {
-  const ENDPOINT = "/appointment/schedule/lock";
+  const ENDPOINT = "/appointment/doctor-schedule/lock";
   return axiosInstance
     .post(ENDPOINT, data)
     .then((response: any) => response.data)
@@ -240,7 +240,7 @@ const lockSchedule = async (data: any) => {
 };
 
 const unlockSchedule = async (doctorId: any, scheduleDate: string) => {
-  const ENDPOINT = `/appointment/schedule/unlock/${doctorId}?scheduleDate=${scheduleDate}`;
+  const ENDPOINT = `/appointment/doctor-schedule/unlock/${doctorId}?scheduleDate=${scheduleDate}`;
   return axiosInstance
     .put(ENDPOINT)
     .then((response: any) => response.data)
@@ -250,7 +250,7 @@ const unlockSchedule = async (doctorId: any, scheduleDate: string) => {
 };
 
 const getSchedule = async (doctorId: any, scheduleDate: string) => {
-  const ENDPOINT = `/appointment/schedule/get/${doctorId}?scheduleDate=${scheduleDate}`;
+  const ENDPOINT = `/appointment/doctor-schedule/get/${doctorId}?scheduleDate=${scheduleDate}`;
   return axiosInstance
     .get(ENDPOINT)
     .then((response: any) => response.data)
@@ -260,7 +260,7 @@ const getSchedule = async (doctorId: any, scheduleDate: string) => {
 };
 
 const getSchedulesByDoctor = async (doctorId: any, startDate?: string, endDate?: string) => {
-  let ENDPOINT = `/appointment/schedule/getAll/${doctorId}`;
+  let ENDPOINT = `/appointment/doctor-schedule/getAll/${doctorId}`;
   if (startDate) ENDPOINT += `?startDate=${startDate}`;
   if (endDate) ENDPOINT += startDate ? `&endDate=${endDate}` : `?endDate=${endDate}`;
   return axiosInstance
@@ -272,7 +272,7 @@ const getSchedulesByDoctor = async (doctorId: any, startDate?: string, endDate?:
 };
 
 const getAllShifts = async () => {
-  const ENDPOINT = "/appointment/schedule/shifts";
+  const ENDPOINT = "/appointment/doctor-schedule/shifts";
   return axiosInstance
     .get(ENDPOINT)
     .then((response: any) => response.data)

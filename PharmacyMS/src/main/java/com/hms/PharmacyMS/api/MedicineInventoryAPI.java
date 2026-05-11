@@ -1,48 +1,43 @@
 package com.hms.PharmacyMS.api;
 
-import com.hms.PharmacyMS.dto.MedicineDTO;
 import com.hms.PharmacyMS.dto.MedicineInventoryDTO;
-import com.hms.PharmacyMS.dto.ResponseDTO;
 import com.hms.PharmacyMS.service.MedicineInventoryService;
-import com.hms.PharmacyMS.service.MedicineService;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
-@RestController
-@CrossOrigin
-@RequestMapping("/pharmacy/inventory")
+@Path("/pharmacy/inventory")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 @RequiredArgsConstructor
 public class MedicineInventoryAPI {
     private final MedicineInventoryService medicineInventoryService;
 
-    @PostMapping("/add")
-    public ResponseEntity<MedicineInventoryDTO> addMedicine(@RequestBody MedicineInventoryDTO medicineDTO) {
-        return  new ResponseEntity<>(
-                medicineInventoryService.addMedicine(medicineDTO), HttpStatus.CREATED
-        );
+    @POST
+    @Path("/add")
+    public Response addMedicine(MedicineInventoryDTO medicineDTO) {
+        return Response.status(Response.Status.CREATED)
+                .entity(medicineInventoryService.addMedicine(medicineDTO))
+                .build();
     }
 
-    @GetMapping("/get/{id}")
-    public ResponseEntity<MedicineInventoryDTO> getMedicineById(@PathVariable Long id) {
-        return  new ResponseEntity<>(
-                medicineInventoryService.getMedicineById(id), HttpStatus.OK
-        );
+    @GET
+    @Path("/get/{id}")
+    public Response getMedicineById(@PathParam("id") Long id) {
+        return Response.ok(medicineInventoryService.getMedicineById(id)).build();
     }
 
-    @PutMapping("/update")
-    public ResponseEntity<MedicineInventoryDTO> updateMedicine(@RequestBody MedicineInventoryDTO medicineDTO) {
-
-        return new ResponseEntity<>(medicineInventoryService.updateMedicine(medicineDTO),HttpStatus.OK);
+    @PUT
+    @Path("/update")
+    public Response updateMedicine(MedicineInventoryDTO medicineDTO) {
+        return Response.ok(medicineInventoryService.updateMedicine(medicineDTO)).build();
     }
 
-    @GetMapping("/getAll")
-    public ResponseEntity<List<MedicineInventoryDTO>> getAllMedicines() {
-        return  new ResponseEntity<>(
-                medicineInventoryService.getAllMedicines(), HttpStatus.OK
-        );
+    @GET
+    @Path("/getAll")
+    public Response getAllMedicines() {
+        return Response.ok(medicineInventoryService.getAllMedicines()).build();
     }
 }
+

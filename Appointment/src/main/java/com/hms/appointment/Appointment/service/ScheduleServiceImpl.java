@@ -10,21 +10,26 @@ import com.hms.appointment.Appointment.exception.HmsException;
 import com.hms.appointment.Appointment.repository.DoctorScheduleRepository;
 import com.hms.appointment.Appointment.repository.ScheduleShiftRepository;
 import com.hms.appointment.Appointment.repository.ShiftRepository;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Service
+@ApplicationScoped
 @RequiredArgsConstructor
 public class ScheduleServiceImpl implements ScheduleService {
     private final DoctorScheduleRepository scheduleRepository;
     private final ScheduleShiftRepository scheduleShiftRepository;
     private final ShiftRepository shiftRepository;
-    private final ProfileClient profileClient;
+    
+    @Inject
+    @RestClient
+    ProfileClient profileClient;
 
     @Override
     @Transactional
@@ -49,11 +54,11 @@ public class ScheduleServiceImpl implements ScheduleService {
                 .lockReason(null)
                 .build();
 
-        schedule = scheduleRepository.save(schedule);
+        scheduleRepository.persist(schedule);
 
         // Create schedule shifts
         for (CreateScheduleRequest.ShiftConfig shiftConfig : request.getShifts()) {
-            Shift shift = shiftRepository.findById(shiftConfig.getShiftId())
+            Shift shift = shiftRepository.findByIdOptional(shiftConfig.getShiftId())
                     .orElseThrow(() -> new HmsException(ErrorCode.SHIFT_NOT_FOUND));
 
             ScheduleShift scheduleShift = ScheduleShift.builder()
@@ -63,7 +68,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                     .bookedSlots(0)
                     .build();
 
-            scheduleShiftRepository.save(scheduleShift);
+            scheduleShiftRepository.persist(scheduleShift);
         }
 
         return toDTO(schedule);
@@ -78,7 +83,7 @@ public class ScheduleServiceImpl implements ScheduleService {
 
         schedule.setIsLocked(true);
         schedule.setLockReason(request.getReason());
-        schedule = scheduleRepository.save(schedule);
+        scheduleRepository.persist(schedule);
 
         return toDTO(schedule);
     }
@@ -92,7 +97,7 @@ public class ScheduleServiceImpl implements ScheduleService {
 
         schedule.setIsLocked(false);
         schedule.setLockReason(null);
-        schedule = scheduleRepository.save(schedule);
+        scheduleRepository.persist(schedule);
 
         return toDTO(schedule);
     }
@@ -118,7 +123,6 @@ public class ScheduleServiceImpl implements ScheduleService {
 
     @Override
     public boolean checkSlotAvailability(Long doctorId, LocalDate scheduleDate, Long shiftId) {
-        // Check if schedule is locked
         if (isScheduleLocked(doctorId, scheduleDate)) {
             return false;
         }
@@ -128,7 +132,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                 .orElse(null);
 
         if (scheduleShift == null) {
-            return false; // No schedule for this shift
+            return false;
         }
 
         return scheduleShift.getBookedSlots() < scheduleShift.getMaxSlots();
@@ -146,7 +150,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         }
 
         scheduleShift.setBookedSlots(scheduleShift.getBookedSlots() + 1);
-        scheduleShiftRepository.save(scheduleShift);
+        scheduleShiftRepository.persist(scheduleShift);
     }
 
     @Override
@@ -158,7 +162,7 @@ public class ScheduleServiceImpl implements ScheduleService {
 
         if (scheduleShift != null && scheduleShift.getBookedSlots() > 0) {
             scheduleShift.setBookedSlots(scheduleShift.getBookedSlots() - 1);
-            scheduleShiftRepository.save(scheduleShift);
+            scheduleShiftRepository.persist(scheduleShift);
         }
     }
 
@@ -166,55 +170,34 @@ public class ScheduleServiceImpl implements ScheduleService {
     public boolean isScheduleLocked(Long doctorId, LocalDate scheduleDate) {
         return scheduleRepository.findByDoctorIdAndScheduleDate(doctorId, scheduleDate)
                 .map(DoctorSchedule::getIsLocked)
-                .orElse(true); // Nếu không có lịch, coi như bị khóa
+                .orElse(true);
     }
 
     @Override
     public boolean isValidAppointmentTime(Long doctorId, LocalDate scheduleDate, int hour) {
-        // Check if schedule exists and is not locked
         DoctorSchedule schedule = scheduleRepository
                 .findByDoctorIdAndScheduleDate(doctorId, scheduleDate)
                 .orElse(null);
 
-        if (schedule == null) {
-            System.out.println("❌ Schedule not found for doctorId: " + doctorId + ", date: " + scheduleDate);
-            return false;
-        }
-        
-        if (schedule.getIsLocked()) {
-            System.out.println("❌ Schedule is locked for doctorId: " + doctorId + ", date: " + scheduleDate);
+        if (schedule == null || schedule.getIsLocked()) {
             return false;
         }
 
-        // Check if hour falls within any shift (use JOIN FETCH to load shift)
         List<ScheduleShift> shifts = scheduleShiftRepository.findByScheduleIdWithShift(schedule.getId());
-        
-        if (shifts.isEmpty()) {
-            System.out.println("❌ No shifts found for scheduleId: " + schedule.getId());
-            return false;
-        }
-        
-        System.out.println("🔍 Checking hour: " + hour + " against " + shifts.size() + " shifts");
         
         for (ScheduleShift scheduleShift : shifts) {
             Shift shift = scheduleShift.getShift();
-            System.out.println("  - Shift: " + shift.getDisplayName() + " (" + shift.getStartHour() + "-" + shift.getEndHour() + ")");
-            
-            // Check if hour falls within shift range
-            // Note: endHour is exclusive (e.g., 7-11 means 7, 8, 9, 10 are valid, but 11 is not)
             if (hour >= shift.getStartHour() && hour < shift.getEndHour()) {
-                System.out.println("✅ Hour " + hour + " is valid for shift " + shift.getDisplayName());
                 return true;
             }
         }
 
-        System.out.println("❌ Hour " + hour + " does not fall within any shift");
         return false;
     }
 
     @Override
     public List<ShiftDTO> getAllShifts() {
-        return shiftRepository.findAll().stream()
+        return shiftRepository.listAll().stream()
                 .map(shift -> ShiftDTO.builder()
                         .id(shift.getId())
                         .name(shift.getName())
@@ -228,7 +211,6 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Override
     @Transactional
     public void initializeDefaultShifts() {
-        // Chỉ tạo nếu chưa có
         if (shiftRepository.count() == 0) {
             Shift morningShift = Shift.builder()
                     .name("MORNING")
@@ -236,7 +218,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                     .startHour(7)
                     .endHour(11)
                     .build();
-            shiftRepository.save(morningShift);
+            shiftRepository.persist(morningShift);
 
             Shift afternoonShift = Shift.builder()
                     .name("AFTERNOON")
@@ -244,7 +226,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                     .startHour(13)
                     .endHour(17)
                     .build();
-            shiftRepository.save(afternoonShift);
+            shiftRepository.persist(afternoonShift);
         }
     }
 
@@ -281,5 +263,6 @@ public class ScheduleServiceImpl implements ScheduleService {
                 .build();
     }
 }
+
 
 

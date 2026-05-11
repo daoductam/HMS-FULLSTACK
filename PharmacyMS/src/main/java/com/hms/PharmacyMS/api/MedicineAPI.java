@@ -1,47 +1,47 @@
 package com.hms.PharmacyMS.api;
 
-
 import com.hms.PharmacyMS.dto.MedicineDTO;
 import com.hms.PharmacyMS.dto.ResponseDTO;
 import com.hms.PharmacyMS.service.MedicineService;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@RestController
-@CrossOrigin
-@RequestMapping("/pharmacy/medicines")
+@Path("/pharmacy/medicines")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 @RequiredArgsConstructor
 public class MedicineAPI {
     private final MedicineService medicineService;
 
-    @PostMapping("/add")
-    public ResponseEntity<Long> addMedicine(@RequestBody MedicineDTO medicineDTO) {
-        return  new ResponseEntity<>(
-                medicineService.addMedicine(medicineDTO), HttpStatus.CREATED
-        );
+    @POST
+    @Path("/add")
+    public Response addMedicine(MedicineDTO medicineDTO) {
+        return Response.status(Response.Status.CREATED)
+                .entity(medicineService.addMedicine(medicineDTO))
+                .build();
     }
 
-    @GetMapping("/get/{id}")
-    public ResponseEntity<MedicineDTO> getMedicineById(@PathVariable Long id) {
-        return  new ResponseEntity<>(
-                medicineService.getMedicineById(id), HttpStatus.OK
-        );
+    @GET
+    @Path("/get/{id}")
+    public Response getMedicineById(@PathParam("id") Long id) {
+        return Response.ok(medicineService.getMedicineById(id)).build();
     }
 
-    @PutMapping("/update")
-    public ResponseEntity<ResponseDTO> updateMedicine(@RequestBody MedicineDTO medicineDTO) {
+    @PUT
+    @Path("/update")
+    public Response updateMedicine(MedicineDTO medicineDTO) {
         medicineService.updateMedicine(medicineDTO);
-        return new ResponseEntity<>(new ResponseDTO("Medicine Updated"),HttpStatus.OK);
+        return Response.ok(new ResponseDTO("Medicine Updated")).build();
     }
 
-    @GetMapping("/getAll")
-    public ResponseEntity<List<MedicineDTO>> getAllMedicines() {
-        return  new ResponseEntity<>(
-                medicineService.getAllMedicines(), HttpStatus.OK
-        );
+    @GET
+    @Path("/getAll")
+    public Response getAllMedicines() {
+        return Response.ok(medicineService.getAllMedicines()).build();
     }
 }
+

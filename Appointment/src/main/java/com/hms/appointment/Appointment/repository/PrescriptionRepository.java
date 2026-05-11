@@ -1,15 +1,26 @@
 package com.hms.appointment.Appointment.repository;
 
 import com.hms.appointment.Appointment.entity.Prescription;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface PrescriptionRepository extends JpaRepository<Prescription, Long> {
-    Optional<Prescription> findByAppointment_Id(Long appointmentId);
-    List<Prescription> findAllByPatientId(Long patientId);
-    @Query("Select p.id from Prescription p where p.patientId=?1")
-    List<Long> findAllPreIdsByPatient(Long patientId);
+@ApplicationScoped
+public class PrescriptionRepository implements PanacheRepository<Prescription> {
+
+    public Optional<Prescription> findByAppointment_Id(Long appointmentId) {
+        return find("appointment.id", appointmentId).firstResultOptional();
+    }
+
+    public List<Prescription> findAllByPatientId(Long patientId) {
+        return find("patientId", patientId).list();
+    }
+
+    public List<Long> findAllPreIdsByPatient(Long patientId) {
+        return getEntityManager().createQuery("SELECT p.id FROM Prescription p WHERE p.patientId = :patientId", Long.class)
+                .setParameter("patientId", patientId)
+                .getResultList();
+    }
 }

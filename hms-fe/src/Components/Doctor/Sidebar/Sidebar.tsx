@@ -42,11 +42,6 @@ const links = [
     url: "/doctor/pharmacy",
     icon: <IconVaccine stroke={1.5} />,
   },
-  {
-    name: "Cộng Đồng",
-    url: "/doctor/community",
-    icon: <IconBuildingCommunity stroke={1.5} />,
-  },
 ];
 
 const Sidebar = () => {

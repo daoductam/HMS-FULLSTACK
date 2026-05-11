@@ -4,31 +4,27 @@ import com.hms.ProfileMS.dto.DoctorDTO;
 import com.hms.ProfileMS.dto.DoctorDropdown;
 import com.hms.ProfileMS.dto.PageResponse;
 import com.hms.ProfileMS.entity.Doctor;
-import com.hms.ProfileMS.entity.Patient;
 import com.hms.ProfileMS.exception.ErrorCode;
 import com.hms.ProfileMS.exception.HmsException;
 import com.hms.ProfileMS.repository.DoctorRepository;
+import io.quarkus.cache.CacheInvalidateAll;
+import io.quarkus.cache.CacheResult;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-
-@Service
+@ApplicationScoped
 @RequiredArgsConstructor
 public class DoctorServiceImpl implements DoctorService {
 
     private final DoctorRepository doctorRepository;
 
-
     @Override
-    @CacheEvict(value = "doctors_list", allEntries = true) // Xóa cache list khi thêm
+    @Transactional
+    @CacheInvalidateAll(cacheName = "doctors-list")
     public Long addDoctor(DoctorDTO doctorDTO) {
         if (doctorDTO.getEmail() != null && doctorRepository.findByEmail(doctorDTO.getEmail()).isPresent()) {
             throw new HmsException(ErrorCode.DOCTOR_ALREADY_EXISTS);
@@ -36,28 +32,32 @@ public class DoctorServiceImpl implements DoctorService {
         if (doctorDTO.getLicenseNo() != null && doctorRepository.findByLicenseNo(doctorDTO.getLicenseNo()).isPresent()) {
             throw new HmsException(ErrorCode.DOCTOR_ALREADY_EXISTS);
         }
-        return doctorRepository.save(doctorDTO.toEntity()).getId();
+        Doctor doctor = doctorDTO.toEntity();
+        doctorRepository.persist(doctor);
+        return doctor.getId();
     }
 
     @Override
-    @Cacheable(value = "doctor_item", key = "#id")
+    @CacheResult(cacheName = "doctor-item")
     public DoctorDTO getDoctorById(Long id) {
-        return doctorRepository.findById(id)
+        return doctorRepository.findByIdOptional(id)
                 .orElseThrow(() -> new HmsException(ErrorCode.DOCTOR_NOT_FOUND)).toDTO();
     }
 
     @Override
-    @CacheEvict(value = {"doctors_list"}, allEntries = true)
-    @CachePut(value = "doctor_item", key = "#doctorDTO.id") // Xóa cache cũ để lần sau lấy mới
+    @Transactional
+    @CacheInvalidateAll(cacheName = "doctors-list")
+    @CacheInvalidateAll(cacheName = "doctor-item")
     public DoctorDTO updateDoctor(DoctorDTO doctorDTO) {
-        doctorRepository.findById(doctorDTO.getId())
+        doctorRepository.findByIdOptional(doctorDTO.getId())
                 .orElseThrow(() -> new HmsException(ErrorCode.DOCTOR_NOT_FOUND));
-        return doctorRepository.save(doctorDTO.toEntity()).toDTO();
+        Doctor doctor = doctorDTO.toEntity();
+        return doctorRepository.getEntityManager().merge(doctor).toDTO();
     }
 
     @Override
     public Boolean doctorExists(Long id) {
-        return doctorRepository.existsById(id);
+        return doctorRepository.findByIdOptional(id).isPresent();
     }
 
     @Override
@@ -66,28 +66,30 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
-    @Cacheable(value = "doctors_list")
+    @CacheResult(cacheName = "doctors-list")
     public List<DoctorDTO> getAllDoctors() {
-        return doctorRepository.findAll().stream().map(Doctor::toDTO).toList();
+        return doctorRepository.listAll().stream().map(Doctor::toDTO).toList();
     }
 
     @Override
     public PageResponse<DoctorDTO> getAllDoctorsPaginated(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Doctor> doctorPage = doctorRepository.findAll(pageable);
+        PanacheQuery<Doctor> query = doctorRepository.findAll().page(page, size);
         
-        List<DoctorDTO> doctorDTOs = doctorPage.getContent().stream()
+        List<DoctorDTO> doctorDTOs = query.list().stream()
                 .map(Doctor::toDTO)
                 .toList();
         
+        long totalElements = query.count();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+
         return PageResponse.<DoctorDTO>builder()
                 .content(doctorDTOs)
-                .page(doctorPage.getNumber())
-                .size(doctorPage.getSize())
-                .totalElements(doctorPage.getTotalElements())
-                .totalPages(doctorPage.getTotalPages())
-                .first(doctorPage.isFirst())
-                .last(doctorPage.isLast())
+                .page(page)
+                .size(size)
+                .totalElements(totalElements)
+                .totalPages(totalPages)
+                .first(page == 0)
+                .last(page >= totalPages - 1)
                 .build();
     }
 
@@ -95,6 +97,4 @@ public class DoctorServiceImpl implements DoctorService {
     public List<DoctorDropdown> getDoctorsById(List<Long> ids) {
         return doctorRepository.findAllDoctorDropdownsByIds(ids);
     }
-
-
 }

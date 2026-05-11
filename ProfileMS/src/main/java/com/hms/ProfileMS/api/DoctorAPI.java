@@ -3,82 +3,78 @@ package com.hms.ProfileMS.api;
 import com.hms.ProfileMS.dto.DoctorDTO;
 import com.hms.ProfileMS.dto.DoctorDropdown;
 import com.hms.ProfileMS.dto.PageResponse;
-import com.hms.ProfileMS.dto.PatientDTO;
 import com.hms.ProfileMS.service.DoctorService;
-import com.hms.ProfileMS.service.PatientService;
+import jakarta.validation.Valid;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@RestController
-@RequestMapping("/profile/doctor")
-    @CrossOrigin
-@Validated
+@Path("/profile/doctor")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 @RequiredArgsConstructor
 public class DoctorAPI {
 
     private final DoctorService doctorService;
 
-    @PostMapping("/add")
-    public ResponseEntity<Long> addUser(@RequestBody DoctorDTO doctorDTO)  {
-        return new ResponseEntity<>(doctorService.addDoctor(doctorDTO),
-                HttpStatus.CREATED);
-
+    @POST
+    @Path("/add")
+    public Response addUser(@Valid DoctorDTO doctorDTO)  {
+        return Response.status(Response.Status.CREATED)
+                .entity(doctorService.addDoctor(doctorDTO))
+                .build();
     }
 
-    @GetMapping("/get/{id}")
-    public ResponseEntity<DoctorDTO> getDoctorById(@PathVariable Long id){
-        return new ResponseEntity<>(doctorService.getDoctorById(id), HttpStatus.OK);
-
+    @GET
+    @Path("/get/{id}")
+    public Response getDoctorById(@PathParam("id") Long id){
+        return Response.ok(doctorService.getDoctorById(id)).build();
     }
 
-    @GetMapping("/getProfileId/{id}")
-    public ResponseEntity<Long> getProfileId(@PathVariable Long id){
-        return new ResponseEntity<>(doctorService.getDoctorById(id).getProfilePictureId(), HttpStatus.OK);
-
+    @GET
+    @Path("/getProfileId/{id}")
+    public Response getProfileId(@PathParam("id") Long id){
+        return Response.ok(doctorService.getDoctorById(id).getProfilePictureId()).build();
     }
 
-    @PutMapping("/update")
-    public ResponseEntity<DoctorDTO> updateDoctor(@RequestBody DoctorDTO doctorDTO){
-        return new ResponseEntity<>(doctorService.updateDoctor(doctorDTO), HttpStatus.OK);
-
+    @PUT
+    @Path("/update")
+    public Response updateDoctor(DoctorDTO doctorDTO){
+        return Response.ok(doctorService.updateDoctor(doctorDTO)).build();
     }
 
-    @GetMapping("/exists/{id}")
-    public ResponseEntity<Boolean> doctorExists(@PathVariable Long id){
-        return new ResponseEntity<>(doctorService.doctorExists(id), HttpStatus.OK);
-
+    @GET
+    @Path("/exists/{id}")
+    public Response doctorExists(@PathParam("id") Long id){
+        return Response.ok(doctorService.doctorExists(id)).build();
     }
 
-    @GetMapping("/dropdowns")
-    public ResponseEntity<List<DoctorDropdown>> getDoctorDropdowns() {
-        return new ResponseEntity<>(doctorService.getDoctorDropdowns(),
-                HttpStatus.OK);
+    @GET
+    @Path("/dropdowns")
+    public Response getDoctorDropdowns() {
+        return Response.ok(doctorService.getDoctorDropdowns()).build();
     }
 
-    @GetMapping("/getAll")
-    public ResponseEntity<List<DoctorDTO>> getAllDoctors() {
-        return new ResponseEntity<>(doctorService.getAllDoctors(),
-                HttpStatus.OK);
+    @GET
+    @Path("/getAll")
+    public Response getAllDoctors() {
+        return Response.ok(doctorService.getAllDoctors()).build();
     }
 
-    @GetMapping("/getAllPaginated")
-    public ResponseEntity<PageResponse<DoctorDTO>> getAllDoctorsPaginated(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return new ResponseEntity<>(doctorService.getAllDoctorsPaginated(page, size),
-                HttpStatus.OK);
+    @GET
+    @Path("/getAllPaginated")
+    public Response getAllDoctorsPaginated(
+            @QueryParam("page") @DefaultValue("0") int page,
+            @QueryParam("size") @DefaultValue("10") int size) {
+        return Response.ok(doctorService.getAllDoctorsPaginated(page, size)).build();
     }
 
-    @GetMapping("/getDoctorsById")
-    public ResponseEntity<List<DoctorDropdown>> getDoctorsById(@RequestParam List<Long> ids) {
-        return new ResponseEntity<>(doctorService.getDoctorsById(ids),
-                HttpStatus.OK);
+    @GET
+    @Path("/getDoctorsById")
+    public Response getDoctorsById(@QueryParam("ids") List<Long> ids) {
+        return Response.ok(doctorService.getDoctorsById(ids)).build();
     }
-
-
 }

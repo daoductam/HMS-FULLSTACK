@@ -37,7 +37,8 @@ const RegisterPage = () => {
       email: (value: string) =>
         /^\S+@\S+$/.test(value) ? null : "Invalid email",
       password: (value: string) =>
-        value.length >= 6 ? null : "Password must be at least 6 characters",
+        /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(value) 
+          ? null : "Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt",
       confirmPassword: (value: string, values) =>
         value === values.password ? null : "Passwords do not match",
     },
@@ -45,7 +46,10 @@ const RegisterPage = () => {
 
   const handleSubmit = (values: typeof form.values) => {
     setLoading(true);
-    registerUser(values)
+    // Loại bỏ confirmPassword trước khi gửi lên Backend
+    const { confirmPassword, ...registerData } = values;
+    
+    registerUser(registerData)
       .then((data) => {
         // KIỂM TRA ROLE TẠI ĐÂY
         if (values.role === "DOCTOR") {

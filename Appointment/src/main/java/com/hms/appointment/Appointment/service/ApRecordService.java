@@ -2,7 +2,7 @@ package com.hms.appointment.Appointment.service;
 
 import com.hms.appointment.Appointment.dto.ApRecordDTO;
 import com.hms.appointment.Appointment.dto.RecordDetails;
-import org.springframework.stereotype.Service;
+
 
 import java.util.List;
 

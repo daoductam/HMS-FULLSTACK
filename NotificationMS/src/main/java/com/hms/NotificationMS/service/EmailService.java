@@ -1,27 +1,20 @@
 package com.hms.NotificationMS.service;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import lombok.RequiredArgsConstructor;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.stereotype.Service;
-import java.nio.charset.StandardCharsets;
+import io.quarkus.mailer.Mail;
+import io.quarkus.mailer.Mailer;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import lombok.extern.slf4j.Slf4j;
 
-@Service
-@RequiredArgsConstructor
+@ApplicationScoped
+@Slf4j
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    @Inject
+    Mailer mailer;
 
     public void sendAppointmentConfirmation(String to, String patientName, String doctorName, String time) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
-
-            helper.setTo(to);
-            helper.setSubject("Xác nhận Đặt lịch khám - Phòng Khám Thông Minh");
-
             // Nội dung HTML chuyên nghiệp
             String htmlContent = String.format(
                     "<h1>Xin chào %s,</h1>" +
@@ -37,12 +30,11 @@ public class EmailService {
                     patientName, doctorName, time
             );
 
-            helper.setText(htmlContent, true);
-            mailSender.send(message);
-            System.out.println("Email sent to " + to);
+            mailer.send(Mail.withHtml(to, "Xác nhận Đặt lịch khám - Phòng Khám Thông Minh", htmlContent));
+            log.info("Email sent to {}", to);
 
-        } catch (MessagingException e) {
-            System.err.println("Failed to send email: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Failed to send email to {}: {}", to, e.getMessage());
             // Có thể throw exception để Kafka retry nếu cần
         }
     }

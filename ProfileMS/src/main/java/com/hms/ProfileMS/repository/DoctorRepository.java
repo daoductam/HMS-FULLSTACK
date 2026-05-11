@@ -2,22 +2,28 @@ package com.hms.ProfileMS.repository;
 
 import com.hms.ProfileMS.dto.DoctorDropdown;
 import com.hms.ProfileMS.entity.Doctor;
-import com.hms.ProfileMS.entity.Patient;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.stereotype.Repository;
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.List;
 import java.util.Optional;
 
-@Repository
-public interface DoctorRepository extends JpaRepository<Doctor, Long> {
-    Optional<Doctor> findByEmail(String email);
-    Optional<Doctor> findByLicenseNo(String licenseNo);
+@ApplicationScoped
+public class DoctorRepository implements PanacheRepository<Doctor> {
+    
+    public Optional<Doctor> findByEmail(String email) {
+        return find("email", email).firstResultOptional();
+    }
 
-    @Query("SELECT d.id AS id, d.name AS name FROM Doctor d")
-    List<DoctorDropdown> findAllDoctorDropdowns();
+    public Optional<Doctor> findByLicenseNo(String licenseNo) {
+        return find("licenseNo", licenseNo).firstResultOptional();
+    }
 
-    @Query("SELECT d.id AS id, d.name AS name FROM Doctor d WHERE d.id in ?1")
-    List<DoctorDropdown> findAllDoctorDropdownsByIds(List<Long> ids);
+    public List<DoctorDropdown> findAllDoctorDropdowns() {
+        return findAll().project(DoctorDropdown.class).list();
+    }
+
+    public List<DoctorDropdown> findAllDoctorDropdownsByIds(List<Long> ids) {
+        return find("id in ?1", ids).project(DoctorDropdown.class).list();
+    }
 }

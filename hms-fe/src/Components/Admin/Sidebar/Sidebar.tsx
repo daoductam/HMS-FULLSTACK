@@ -61,11 +61,6 @@ const links = [
     url: "/admin/schedule",
     icon: <IconCalendarTime stroke={1.5} />,
   },
-  {
-    name: "Cộng Đồng",
-    url: "/admin/community",
-    icon: <IconBuildingCommunity stroke={1.5} />,
-  },
 ];
 
 const Sidebar = () => {

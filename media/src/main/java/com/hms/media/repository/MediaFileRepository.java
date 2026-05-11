@@ -1,7 +1,9 @@
 package com.hms.media.repository;
 
 import com.hms.media.entity.MediaFile;
-import org.springframework.data.jpa.repository.JpaRepository;
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
+import jakarta.enterprise.context.ApplicationScoped;
 
-public interface MediaFileRepository extends JpaRepository<MediaFile, Long> {
+@ApplicationScoped
+public class MediaFileRepository implements PanacheRepository<MediaFile> {
 }

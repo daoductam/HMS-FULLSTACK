@@ -3,46 +3,50 @@ package com.hms.media.api;
 import com.hms.media.dto.MediaFileDTO;
 import com.hms.media.entity.MediaFile;
 import com.hms.media.service.MediaService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import org.jboss.resteasy.reactive.RestForm;
+import org.jboss.resteasy.reactive.multipart.FileUpload;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Optional;
 
-@RestController
-@RequestMapping("/media")
-@RequiredArgsConstructor
+@Path("/media")
 public class MediaAPI {
 
-    private final MediaService mediaService;
+    @Inject
+    MediaService mediaService;
 
-    @PostMapping("/upload")
-    public ResponseEntity<MediaFileDTO> uploadFile(@RequestParam("file")MultipartFile file) {
+    @POST
+    @Path("/upload")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response uploadFile(@RestForm("file") FileUpload file) {
         try {
-            MediaFileDTO mediaFileDTO = mediaService.storeFile(file);
-            return ResponseEntity.ok(mediaFileDTO);
+            byte[] data = Files.readAllBytes(file.filePath());
+            MediaFileDTO mediaFileDTO = mediaService.storeFile(data, file.fileName(), file.contentType());
+            return Response.ok(mediaFileDTO).build();
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return Response.serverError().build();
         }
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<byte[]> getFile(@PathVariable Long id) {
+    @GET
+    @Path("/{id}")
+    public Response getFile(@PathParam("id") Long id) {
         Optional<MediaFile> mediaFileOptional = mediaService.getFile(id);
         if (mediaFileOptional.isPresent()) {
             MediaFile mediaFile = mediaFileOptional.get();
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" +
-                            mediaFile.getName() + "\"")
-                    .contentType(MediaType.parseMediaType(mediaFile.getType()))
-                    .body(mediaFile.getData());
-        } else  {
-            return  ResponseEntity.notFound().build();
+            return Response.ok(mediaFile.getData())
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + mediaFile.getName() + "\"")
+                    .type(mediaFile.getType())
+                    .build();
+        } else {
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
     }
 }

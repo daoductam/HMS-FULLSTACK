@@ -4,36 +4,47 @@ import com.hms.PaymentMS.entity.PaymentTransaction;
 import com.hms.PaymentMS.repository.PaymentTransactionRepository;
 import com.hms.PaymentMS.service.PaymentService;
 import com.hms.hms_common.event.PaymentSuccessEvent;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.web.bind.annotation.*;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import lombok.extern.slf4j.Slf4j;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
+import org.jboss.resteasy.reactive.RestQuery;
 
 import java.util.Map;
 
-@RestController
-@RequestMapping("/payment")
-@RequiredArgsConstructor
+@Path("/payment")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+@Slf4j
 public class PaymentAPI {
 
-    private final PaymentService paymentService;
-    private final PaymentTransactionRepository paymentTransactionRepository;
+    @Inject
+    PaymentService paymentService;
 
-    @Autowired
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    @Inject
+    PaymentTransactionRepository paymentTransactionRepository;
+
+    @Inject
+    @Channel("payment-success-out")
+    Emitter<PaymentSuccessEvent> paymentEmitter;
 
     // API 1: Tạo link thanh toán
-    @PostMapping("/create-momo")
-    public ResponseEntity<String> createMomo(@RequestParam String orderId,
-                                             @RequestParam Double amount) {
+    @POST
+    @Path("/create-momo")
+    public Response createMomo(@RestQuery String orderId, @RestQuery Double amount) {
         String payUrl = paymentService.createMomoPayment(orderId, amount, "Thanh toan don thuoc");
-        return ResponseEntity.ok(payUrl);
+        return Response.ok(payUrl).build();
     }
 
-    @PostMapping("/ipn-callback")
-    public ResponseEntity<Void> ipnCallback(@RequestBody Map<String, Object> response) {
-        System.out.println("🔔 Nhận được IPN callback từ MoMo: " + response);
+    @POST
+    @Path("/ipn-callback")
+    @Transactional
+    public Response ipnCallback(Map<String, Object> response) {
+        log.info("🔔 Nhận được IPN callback từ MoMo: {}", response);
         
         // ... (Logic kiểm tra chữ ký giữ nguyên) ...
 
@@ -56,7 +67,7 @@ public class PaymentAPI {
         if ("0".equals(resultCode)) {
             // Thanh toán thành công
             transaction.setStatus("SUCCESS");
-            System.out.println("Thanh toán THÀNH CÔNG cho đơn: " + orderId);
+            log.info("Thanh toán THÀNH CÔNG cho đơn: {}", orderId);
 
             // Xác định nguồn thanh toán dựa trên orderId
             String paymentSource = "PHARMACY"; // Mặc định là PHARMACY
@@ -74,18 +85,18 @@ public class PaymentAPI {
             event.setPaymentSource(paymentSource);
 
             // Gửi message vào topic "payment_success_topic"
-            kafkaTemplate.send("payment_success_topic", event);
-            System.out.println("✅ Đã gửi event thanh toán thành công: " + event);
+            paymentEmitter.send(event);
+            log.info("✅ Đã gửi event thanh toán thành công: {}", event);
         } else {
             // Thanh toán thất bại
             transaction.setStatus("FAILED");
-            System.out.println("❌ Thanh toán THẤT BẠI cho đơn: " + orderId + ", resultCode: " + resultCode);
+            log.info("❌ Thanh toán THẤT BẠI cho đơn: {}, resultCode: {}", orderId, resultCode);
         }
 
         // Lưu vào database
-        paymentTransactionRepository.save(transaction);
-        System.out.println("💾 Đã lưu payment transaction vào database: " + transaction.getId());
+        paymentTransactionRepository.persist(transaction);
+        log.info("💾 Đã lưu payment transaction vào database: {}", transaction.getId());
 
-        return ResponseEntity.noContent().build();
+        return Response.noContent().build();
     }
 }

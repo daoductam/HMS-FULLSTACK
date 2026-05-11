@@ -1,17 +1,17 @@
 package com.hms.PharmacyMS.clients;
 
-import com.hms.PharmacyMS.config.FeignClientInterceptor;
-import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.QueryParam;
+import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
-@FeignClient(name = "PaymentMS", configuration = FeignClientInterceptor.class)
+@RegisterRestClient(configKey = "payment-api")
 public interface PaymentClient {
     
-    @PostMapping("/payment/create-momo")
+    @POST
+    @Path("/payment/create-momo")
     String createMomoPayment(
-            @RequestParam("orderId") String orderId,
-            @RequestParam("amount") Double amount
+            @QueryParam("orderId") String orderId,
+            @QueryParam("amount") Double amount
     );
 }
-

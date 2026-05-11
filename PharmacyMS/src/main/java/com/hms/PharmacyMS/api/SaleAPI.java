@@ -8,24 +8,30 @@ import com.hms.PharmacyMS.dto.SaleItemDTO;
 import com.hms.PharmacyMS.dto.SaleRequest;
 import com.hms.PharmacyMS.service.SaleItemService;
 import com.hms.PharmacyMS.service.SaleService;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 import java.util.List;
 
-@RestController
-@CrossOrigin
-@RequestMapping("/pharmacy/sales")
+@Path("/pharmacy/sales")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 @RequiredArgsConstructor
 public class SaleAPI {
     private final SaleService saleService;
     private final SaleItemService saleItemService;
-    private final PaymentClient paymentClient;
+    
+    @Inject
+    @RestClient
+    PaymentClient paymentClient;
 
-    @PostMapping("/create")
-    public ResponseEntity<CreateSaleResponse> createSale(@RequestBody SaleRequest dto) {
+    @POST
+    @Path("/create")
+    public Response createSale(SaleRequest dto) {
         // 1. Tạo sale (status sẽ là PAID nếu DIRECT, PENDING nếu MOMO)
         Long saleId = saleService.createSale(dto);
         
@@ -35,7 +41,7 @@ public class SaleAPI {
                     .saleId(saleId)
                     .paymentUrl(null)
                     .build();
-            return new ResponseEntity<>(response, HttpStatus.CREATED);
+            return Response.status(Response.Status.CREATED).entity(response).build();
         }
         
         // 3. Nếu là MOMO, gọi PaymentMS để tạo payment link
@@ -48,32 +54,35 @@ public class SaleAPI {
                 .paymentUrl(paymentUrl)
                 .build();
         
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        return Response.status(Response.Status.CREATED).entity(response).build();
     }
 
-    @PutMapping("/update")
-    public  ResponseEntity<ResponseDTO> updateSale(@RequestBody SaleDTO dto) {
+    @PUT
+    @Path("/update")
+    public Response updateSale(SaleDTO dto) {
         saleService.updateSale(dto);
-        return new ResponseEntity<>(new ResponseDTO("Sale updated successfull"), HttpStatus.OK);
+        return Response.ok(new ResponseDTO("Sale updated successfull")).build();
     }
 
-    @GetMapping("/getSaleItems/{saleId}")
-    public  ResponseEntity<List<SaleItemDTO>> getSaleItems(@PathVariable Long saleId) {
+    @GET
+    @Path("/getSaleItems/{saleId}")
+    public Response getSaleItems(@PathParam("saleId") Long saleId) {
         List<SaleItemDTO> saleItems = saleItemService.getSaleItemBySaleId(saleId);
-        return new ResponseEntity<>(saleItems, HttpStatus.OK);
+        return Response.ok(saleItems).build();
     }
 
-    @GetMapping("/get/{id}")
-    public ResponseEntity<SaleDTO> getSale(@PathVariable Long id) {
+    @GET
+    @Path("/get/{id}")
+    public Response getSale(@PathParam("id") Long id) {
         SaleDTO sale = saleService.getSale(id);
-        return new ResponseEntity<>(sale, HttpStatus.OK);
-
+        return Response.ok(sale).build();
     }
 
-    @GetMapping("/getAll")
-    public ResponseEntity<List<SaleDTO>> getAllSales() {
+    @GET
+    @Path("/getAll")
+    public Response getAllSales() {
         List<SaleDTO> sales = saleService.getAllSales();
-        return new ResponseEntity<>(sales , HttpStatus.OK);
+        return Response.ok(sales).build();
     }
-
 }
+

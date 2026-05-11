@@ -1,13 +1,11 @@
 package com.hms.PaymentMS;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import io.quarkus.runtime.Quarkus;
+import io.quarkus.runtime.annotations.QuarkusMain;
 
-@SpringBootApplication
+@QuarkusMain
 public class PaymentMsApplication {
-
-	public static void main(String[] args) {
-		SpringApplication.run(PaymentMsApplication.class, args);
-	}
-
+    public static void main(String ... args) {
+        Quarkus.run(args);
+    }
 }

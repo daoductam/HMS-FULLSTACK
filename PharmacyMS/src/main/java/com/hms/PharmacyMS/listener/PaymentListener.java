@@ -3,17 +3,19 @@ package com.hms.PharmacyMS.listener;
 import com.hms.PharmacyMS.entity.Sale;
 import com.hms.PharmacyMS.repository.SaleRepository;
 import com.hms.hms_common.event.PaymentSuccessEvent;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.stereotype.Component;
+import org.eclipse.microprofile.reactive.messaging.Incoming;
 
-@Component
+@ApplicationScoped
 @RequiredArgsConstructor
 public class PaymentListener {
 
     private final SaleRepository saleRepository;
 
-    @KafkaListener(topics = "payment_success_topic", groupId = "pharmacy_group")
+    @Incoming("payment-success")
+    @Transactional
     public void handlePaymentSuccess(PaymentSuccessEvent event) {
         System.out.println("PharmacyMS nhận được sự kiện thanh toán: " + event);
 
@@ -25,20 +27,23 @@ public class PaymentListener {
                 String orderId = event.getOrderId();
                 Long saleId;
                 
-                if (orderId.startsWith("SALE-")) {
+                if (orderId != null && orderId.startsWith("SALE-")) {
                     saleId = Long.parseLong(orderId.substring(5));
-                } else {
+                } else if (orderId != null) {
                     // Nếu không có prefix, thử parse trực tiếp
                     saleId = Long.parseLong(orderId);
+                } else {
+                    System.err.println("❌ OrderID is null");
+                    return;
                 }
 
                 // Cập nhật Database
-                Sale sale = saleRepository.findById(saleId)
+                Sale sale = saleRepository.findByIdOptional(saleId)
                         .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng: " + saleId));
 
                 if (!"PAID".equals(sale.getStatus())) {
                     sale.setStatus("PAID");
-                    saleRepository.save(sale);
+                    saleRepository.persist(sale);
                     System.out.println("✅ Đã cập nhật trạng thái PAID cho đơn hàng: " + saleId);
                 }
             }
@@ -47,4 +52,4 @@ public class PaymentListener {
             System.err.println("❌ Lỗi khi xử lý message Kafka: " + e.getMessage());
         }
     }
-}
+}

@@ -2,36 +2,39 @@ package com.hms.PaymentMS.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.FieldDefaults;
-
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "payment_transactions")
 @Getter
 @Setter
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
+@Builder
 public class PaymentTransaction {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long id;
+    private Long id;
 
-    String orderId; // ID đơn hàng từ Pharmacy hoặc Appointment
-    String transactionId; // Mã giao dịch từ cổng thanh toán (VNPay/Momo)
+    private String orderId;
+    private String transactionId;
 
-    Double amount;
-    String paymentMethod; // VNPAY, MOMO, CASH
-    String status; // PENDING, SUCCESS, FAILED
+    private Double amount;
+    private String paymentMethod;
+    private String status;
 
-    LocalDateTime createdAt;
-    LocalDateTime updatedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     @PrePersist
-    protected void onCreate() { createdAt = LocalDateTime.now(); updatedAt = LocalDateTime.now(); }
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
 
     @PreUpdate
-    protected void onUpdate() { updatedAt = LocalDateTime.now(); }
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }

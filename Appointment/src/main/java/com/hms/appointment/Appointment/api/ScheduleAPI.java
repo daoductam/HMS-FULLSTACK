@@ -2,50 +2,57 @@ package com.hms.appointment.Appointment.api;
 
 import com.hms.appointment.Appointment.dto.*;
 import com.hms.appointment.Appointment.service.ScheduleService;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
 
-@RestController
-@RequestMapping("/appointment/schedule")
-@CrossOrigin
+@Path("/appointment/doctor-schedule")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 @RequiredArgsConstructor
 public class ScheduleAPI {
     private final ScheduleService scheduleService;
 
-    @PostMapping("/create")
-    public ResponseEntity<DoctorScheduleDTO> createSchedule(@RequestBody CreateScheduleRequest request) {
-        return new ResponseEntity<>(scheduleService.createSchedule(request), HttpStatus.CREATED);
+    @POST
+    @Path("/create")
+    public Response createSchedule(CreateScheduleRequest request) {
+        return Response.status(Response.Status.CREATED)
+                .entity(scheduleService.createSchedule(request))
+                .build();
     }
 
-    @PostMapping("/lock")
-    public ResponseEntity<DoctorScheduleDTO> lockSchedule(@RequestBody LockScheduleRequest request) {
-        return new ResponseEntity<>(scheduleService.lockSchedule(request), HttpStatus.OK);
+    @POST
+    @Path("/lock")
+    public Response lockSchedule(LockScheduleRequest request) {
+        return Response.ok(scheduleService.lockSchedule(request)).build();
     }
 
-    @PutMapping("/unlock/{doctorId}")
-    public ResponseEntity<DoctorScheduleDTO> unlockSchedule(
-            @PathVariable Long doctorId,
-            @RequestParam LocalDate scheduleDate) {
-        return new ResponseEntity<>(scheduleService.unlockSchedule(doctorId, scheduleDate), HttpStatus.OK);
+    @PUT
+    @Path("/unlock/{doctorId}")
+    public Response unlockSchedule(
+            @PathParam("doctorId") Long doctorId,
+            @QueryParam("scheduleDate") LocalDate scheduleDate) {
+        return Response.ok(scheduleService.unlockSchedule(doctorId, scheduleDate)).build();
     }
 
-    @GetMapping("/get/{doctorId}")
-    public ResponseEntity<DoctorScheduleDTO> getSchedule(
-            @PathVariable Long doctorId,
-            @RequestParam LocalDate scheduleDate) {
-        return new ResponseEntity<>(scheduleService.getSchedule(doctorId, scheduleDate), HttpStatus.OK);
+    @GET
+    @Path("/get/{doctorId}")
+    public Response getSchedule(
+            @PathParam("doctorId") Long doctorId,
+            @QueryParam("scheduleDate") LocalDate scheduleDate) {
+        return Response.ok(scheduleService.getSchedule(doctorId, scheduleDate)).build();
     }
 
-    @GetMapping("/getAll/{doctorId}")
-    public ResponseEntity<List<DoctorScheduleDTO>> getSchedulesByDoctor(
-            @PathVariable Long doctorId,
-            @RequestParam(required = false) LocalDate startDate,
-            @RequestParam(required = false) LocalDate endDate) {
+    @GET
+    @Path("/getAll/{doctorId}")
+    public Response getSchedulesByDoctor(
+            @PathParam("doctorId") Long doctorId,
+            @QueryParam("startDate") LocalDate startDate,
+            @QueryParam("endDate") LocalDate endDate) {
         // Nếu không có startDate/endDate, lấy 30 ngày từ hôm nay
         if (startDate == null) {
             startDate = LocalDate.now();
@@ -53,21 +60,22 @@ public class ScheduleAPI {
         if (endDate == null) {
             endDate = startDate.plusDays(30);
         }
-        return new ResponseEntity<>(
-                scheduleService.getSchedulesByDoctor(doctorId, startDate, endDate),
-                HttpStatus.OK);
+        return Response.ok(scheduleService.getSchedulesByDoctor(doctorId, startDate, endDate)).build();
     }
 
-    @GetMapping("/shifts")
-    public ResponseEntity<List<ShiftDTO>> getAllShifts() {
-        return new ResponseEntity<>(scheduleService.getAllShifts(), HttpStatus.OK);
+    @GET
+    @Path("/shifts")
+    public Response getAllShifts() {
+        return Response.ok(scheduleService.getAllShifts()).build();
     }
 
-    @PostMapping("/initialize-shifts")
-    public ResponseEntity<String> initializeShifts() {
+    @POST
+    @Path("/initialize-shifts")
+    public Response initializeShifts() {
         scheduleService.initializeDefaultShifts();
-        return new ResponseEntity<>("Đã khởi tạo ca làm việc mặc định", HttpStatus.OK);
+        return Response.ok("Đã khởi tạo ca làm việc mặc định").build();
     }
 }
+
 
 

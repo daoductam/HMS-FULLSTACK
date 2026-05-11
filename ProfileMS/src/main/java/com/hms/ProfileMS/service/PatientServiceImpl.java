@@ -7,27 +7,25 @@ import com.hms.ProfileMS.entity.Patient;
 import com.hms.ProfileMS.exception.ErrorCode;
 import com.hms.ProfileMS.exception.HmsException;
 import com.hms.ProfileMS.repository.PatientRepository;
+import io.quarkus.cache.CacheInvalidateAll;
+import io.quarkus.cache.CacheResult;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-
-@Service
+@ApplicationScoped
 @RequiredArgsConstructor
 public class PatientServiceImpl implements PatientService {
 
     private final PatientRepository patientRepository;
 
     @Override
-    @CacheEvict(value = "patients_list", allEntries = true)
+    @Transactional
+    @CacheInvalidateAll(cacheName = "patients-list")
     public Long addPatient(PatientDTO patientDTO) {
         if (patientDTO.getEmail() != null && patientRepository.findByEmail(patientDTO.getEmail()).isPresent()) {
             throw new HmsException(ErrorCode.PATIENT_ALREADY_EXISTS);
@@ -35,53 +33,59 @@ public class PatientServiceImpl implements PatientService {
         if (patientDTO.getCCCD() != null && patientRepository.findByCCCD(patientDTO.getCCCD()).isPresent()) {
             throw new HmsException(ErrorCode.PATIENT_ALREADY_EXISTS);
         }
-        return patientRepository.save(patientDTO.toEntity()).getId();
+        Patient patient = patientDTO.toEntity();
+        patientRepository.persist(patient);
+        return patient.getId();
     }
 
     @Override
-    @Cacheable(value = "patient_item", key = "#id")
+    @CacheResult(cacheName = "patient-item")
     public PatientDTO getPatientById(Long id) {
-        return patientRepository.findById(id)
+        return patientRepository.findByIdOptional(id)
                 .orElseThrow(() -> new HmsException(ErrorCode.PATIENT_NOT_FOUND)).toDTO();
     }
 
     @Override
-    @CachePut(value = "patient_item", key = "#patientDTO.id")
-    @CacheEvict(value = "patients_list", allEntries = true)
+    @Transactional
+    @CacheInvalidateAll(cacheName = "patient-item")
+    @CacheInvalidateAll(cacheName = "patients-list")
     public PatientDTO updatePatient(PatientDTO patientDTO) {
-        patientRepository.findById(patientDTO.getId())
+        patientRepository.findByIdOptional(patientDTO.getId())
                 .orElseThrow(() -> new HmsException(ErrorCode.PATIENT_NOT_FOUND));
-        return patientRepository.save(patientDTO.toEntity()).toDTO();
+        Patient patient = patientDTO.toEntity();
+        return patientRepository.getEntityManager().merge(patient).toDTO();
     }
 
     @Override
     public Boolean patientExists(Long id) {
-        return patientRepository.existsById(id);
+        return patientRepository.findByIdOptional(id).isPresent();
     }
 
     @Override
-    @Cacheable(value = "patients_list")
+    @CacheResult(cacheName = "patients-list")
     public List<PatientDTO> getAllPatients() {
-        return patientRepository.findAll().stream().map(Patient::toDTO).toList();
+        return patientRepository.listAll().stream().map(Patient::toDTO).toList();
     }
 
     @Override
     public PageResponse<PatientDTO> getAllPatientsPaginated(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Patient> patientPage = patientRepository.findAll(pageable);
+        PanacheQuery<Patient> query = patientRepository.findAll().page(page, size);
         
-        List<PatientDTO> patientDTOs = patientPage.getContent().stream()
+        List<PatientDTO> patientDTOs = query.list().stream()
                 .map(Patient::toDTO)
                 .collect(Collectors.toList());
         
+        long totalElements = query.count();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+
         return PageResponse.<PatientDTO>builder()
                 .content(patientDTOs)
-                .page(patientPage.getNumber())
-                .size(patientPage.getSize())
-                .totalElements(patientPage.getTotalElements())
-                .totalPages(patientPage.getTotalPages())
-                .first(patientPage.isFirst())
-                .last(patientPage.isLast())
+                .page(page)
+                .size(size)
+                .totalElements(totalElements)
+                .totalPages(totalPages)
+                .first(page == 0)
+                .last(page >= totalPages - 1)
                 .build();
     }
 
@@ -92,7 +96,7 @@ public class PatientServiceImpl implements PatientService {
 
     @Override
     public List<PatientDTO> findAllByIds(List<Long> ids) {
-        return patientRepository.findAllById(ids)
+        return patientRepository.find("id in ?1", ids).list()
                 .stream()
                 .map(Patient::toDTO)
                 .collect(Collectors.toList());

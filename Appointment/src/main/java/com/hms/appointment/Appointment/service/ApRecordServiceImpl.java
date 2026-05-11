@@ -9,9 +9,11 @@ import com.hms.appointment.Appointment.exception.ErrorCode;
 import com.hms.appointment.Appointment.exception.HmsException;
 import com.hms.appointment.Appointment.repository.ApRecordRepository;
 import com.hms.appointment.Appointment.util.StringListConverter;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,36 +21,41 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-@Service
+@ApplicationScoped
 @RequiredArgsConstructor
 @Transactional
-public class ApRecordServiceImpl implements ApRecordService{
+public class ApRecordServiceImpl implements ApRecordService {
 
     private final ApRecordRepository apRecordRepository;
     private final PrescriptionService prescriptionService;
-    private final ProfileClient profileClient;
+    
+    @Inject
+    @RestClient
+    ProfileClient profileClient;
 
     @Override
     public Long createApRecord(ApRecordDTO request) {
-        Optional<ApRecord>existingRecord =
+        Optional<ApRecord> existingRecord =
                 apRecordRepository.findByAppointment_Id(request.getAppointmentId());
         if (existingRecord.isPresent()) {
             throw new HmsException(ErrorCode.APPOINTMENT_RECORD_NOT_FOUND);
         }
         request.setCreatedAt(LocalDateTime.now());
-        Long id = apRecordRepository.save(request.toEntity()).getId();
+        ApRecord record = request.toEntity();
+        apRecordRepository.persist(record);
+        
         if (request.getPrescription() != null) {
             request.getPrescription().setAppointmentId(request.getAppointmentId());
             prescriptionService.savePrescription(request.getPrescription());
         }
-        return id;
+        return record.getId();
     }
 
     @Override
     public void updateApRecord(ApRecordDTO request) {
-        ApRecord existing =
-                apRecordRepository.findById(request.getId())
+        ApRecord existing = apRecordRepository.findByIdOptional(request.getId())
                         .orElseThrow(() -> new HmsException(ErrorCode.APPOINTMENT_RECORD_NOT_FOUND));
+        
         existing.setNotes(request.getNotes());
         existing.setDiagnosis(request.getDiagnosis());
         existing.setFollowUpDate(request.getFollowUpDate());
@@ -56,7 +63,7 @@ public class ApRecordServiceImpl implements ApRecordService{
         existing.setTests(StringListConverter.convertListToString(request.getTests()));
         existing.setReferral(request.getReferral());
 
-        apRecordRepository.save(existing);
+        apRecordRepository.persist(existing);
     }
 
     @Override
@@ -67,7 +74,7 @@ public class ApRecordServiceImpl implements ApRecordService{
 
     @Override
     public ApRecordDTO getApRecordDetailsByAppointmentId(Long appointmentId) {
-        ApRecordDTO record =  apRecordRepository.findByAppointment_Id(appointmentId)
+        ApRecordDTO record = apRecordRepository.findByAppointment_Id(appointmentId)
                 .orElseThrow(() -> new HmsException(ErrorCode.APPOINTMENT_RECORD_NOT_FOUND)).toDTO();
         record.setPrescription(prescriptionService.getPrescriptionByAppointmentId(appointmentId));
         return record;
@@ -75,9 +82,8 @@ public class ApRecordServiceImpl implements ApRecordService{
 
     @Override
     public ApRecordDTO getApRecordById(Long recordId) {
-        return apRecordRepository.findById(recordId)
+        return apRecordRepository.findByIdOptional(recordId)
                 .orElseThrow(() -> new HmsException(ErrorCode.APPOINTMENT_RECORD_NOT_FOUND)).toDTO();
-
     }
 
     @Override
@@ -86,20 +92,22 @@ public class ApRecordServiceImpl implements ApRecordService{
         List<RecordDetails> recordDetails = records.stream()
                 .map(ApRecord::toRecordDetails)
                 .toList();
+        
         List<Long> doctorIds = recordDetails.stream()
                 .map(RecordDetails::getDoctorId)
                 .distinct().toList();
-        List<DoctorName> doctors = profileClient.getDoctorsById(doctorIds);
-        Map<Long, String> doctorMap = doctors.stream()
-                .collect(Collectors.toMap(DoctorName::getId, DoctorName::getName));
-        recordDetails.forEach(record -> {
-            String doctorName = doctorMap.get(record.getDoctorId());
-            if (doctorName != null) {
-                record.setDoctorName(doctorName);
-            } else {
-                record.setDoctorName("Unknown Doctor");
-            }
-        });
+        
+        if (!doctorIds.isEmpty()) {
+            List<DoctorName> doctors = profileClient.getDoctorsById(doctorIds);
+            Map<Long, String> doctorMap = doctors.stream()
+                    .collect(Collectors.toMap(DoctorName::getId, DoctorName::getName));
+            
+            recordDetails.forEach(record -> {
+                String doctorName = doctorMap.get(record.getDoctorId());
+                record.setDoctorName(doctorName != null ? doctorName : "Unknown Doctor");
+            });
+        }
+        
         return recordDetails;
     }
 
@@ -108,3 +116,4 @@ public class ApRecordServiceImpl implements ApRecordService{
         return apRecordRepository.existsByAppointment_Id(appointmentId);
     }
 }
+

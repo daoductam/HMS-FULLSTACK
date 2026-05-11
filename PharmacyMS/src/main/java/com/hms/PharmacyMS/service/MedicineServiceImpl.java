@@ -5,61 +5,63 @@ import com.hms.PharmacyMS.entity.Medicine;
 import com.hms.PharmacyMS.exception.ErrorCode;
 import com.hms.PharmacyMS.exception.HmsException;
 import com.hms.PharmacyMS.repository.MedicineRepository;
+import io.quarkus.cache.CacheInvalidate;
+import io.quarkus.cache.CacheInvalidateAll;
+import io.quarkus.cache.CacheResult;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-@Service
+@ApplicationScoped
 @RequiredArgsConstructor
-public class MedicineServiceImpl implements MedicineService{
+@Transactional
+public class MedicineServiceImpl implements MedicineService {
     private final MedicineRepository medicineRepository;
 
     @Override
-    @CacheEvict(value = "medicines_list", allEntries = true) // Xóa cache danh sách khi thêm mới
+    @CacheInvalidateAll(cacheName = "medicines-list")
     public Long addMedicine(MedicineDTO medicineDTO) {
         Optional<Medicine> optional = medicineRepository
                 .findByNameIgnoreCaseAndDosageIgnoreCase(medicineDTO.getName(), medicineDTO.getDosage());
         if (optional.isPresent()) {
             throw new HmsException(ErrorCode.MEDICINE_ALREADY_EXISTS);
-
         }
 
         medicineDTO.setStock(0);
         medicineDTO.setCreatedAt(LocalDateTime.now());
-        return medicineRepository.save(medicineDTO.toEntity()).getId();
+        Medicine medicine = medicineDTO.toEntity();
+        medicineRepository.persist(medicine);
+        return medicine.getId();
     }
 
     @Override
-    @Cacheable(value = "medicine_item", key = "#id") // Cache từng viên thuốc theo ID
+    @CacheResult(cacheName = "medicine-item")
     public MedicineDTO getMedicineById(Long id) {
-        return medicineRepository.findById(id)
+        return medicineRepository.findByIdOptional(id)
                 .orElseThrow(() -> new HmsException(ErrorCode.MEDICINE_NOT_FOUND)).toDTO();
     }
 
     @Override
-    @CacheEvict(value = "medicines_list", allEntries = true) // Xóa cache danh sách
-    @CachePut(value = "medicine_item", key = "#medicineDTO.id") // Cập nhật cache item này
-    public void updateMedicine( MedicineDTO medicineDTO) {
-        Medicine existingMedicine =
-                medicineRepository.findById(medicineDTO.getId())
+    @CacheInvalidateAll(cacheName = "medicines-list")
+    @CacheInvalidate(cacheName = "medicine-item")
+    public void updateMedicine(MedicineDTO medicineDTO) {
+        Medicine existingMedicine = medicineRepository.findByIdOptional(medicineDTO.getId())
                         .orElseThrow(() -> new HmsException(ErrorCode.MEDICINE_NOT_FOUND));
+        
         if (!(medicineDTO.getName().equalsIgnoreCase(existingMedicine.getName())
-        && !medicineDTO.getDosage().equalsIgnoreCase(existingMedicine.getDosage()))) {
+                && medicineDTO.getDosage().equalsIgnoreCase(existingMedicine.getDosage()))) {
             Optional<Medicine> optional = medicineRepository
                     .findByNameIgnoreCaseAndDosageIgnoreCase(medicineDTO.getName(), medicineDTO.getDosage());
             if (optional.isPresent()) {
                 throw new HmsException(ErrorCode.MEDICINE_ALREADY_EXISTS);
-
             }
-
         }
+        
         existingMedicine.setName(medicineDTO.getName());
         existingMedicine.setDosage(medicineDTO.getDosage());
         existingMedicine.setCategory(medicineDTO.getCategory());
@@ -67,15 +69,15 @@ public class MedicineServiceImpl implements MedicineService{
         existingMedicine.setManufacturer(medicineDTO.getManufacturer());
         existingMedicine.setUnitPrice(medicineDTO.getUnitPrice());
         existingMedicine.setCreatedAt(medicineDTO.getCreatedAt());
-        medicineRepository.save(existingMedicine);
-
+        // Panache manages entities, persist is for new ones, but for updates just being in a transaction is enough.
+        // We call persist to be explicit or if it was detached.
+        medicineRepository.persist(existingMedicine);
     }
 
-
     @Override
-    @Cacheable(value = "medicines_list") // Cache toàn bộ danh sách thuốc
+    @CacheResult(cacheName = "medicines-list")
     public List<MedicineDTO> getAllMedicines() {
-        return medicineRepository.findAll().stream()
+        return medicineRepository.listAll().stream()
                 .map(Medicine::toDTO)
                 .collect(Collectors.toList());
     }
@@ -87,23 +89,23 @@ public class MedicineServiceImpl implements MedicineService{
     }
 
     @Override
-    @CacheEvict(value = "medicine_item", key = "#id") // Xóa cache item khi stock thay đổi để lần sau lấy lại
+    @CacheInvalidate(cacheName = "medicine-item")
     public Integer addStock(Long id, Integer quantity) {
-        Medicine medicine = medicineRepository.findById(id)
+        Medicine medicine = medicineRepository.findByIdOptional(id)
                 .orElseThrow(() -> new HmsException(ErrorCode.MEDICINE_NOT_FOUND));
-        medicine.setStock(medicine.getStock()!=null ? medicine.getStock()+quantity :  quantity);
-        medicineRepository.save(medicine);
+        medicine.setStock(medicine.getStock() != null ? medicine.getStock() + quantity : quantity);
+        medicineRepository.persist(medicine);
         return medicine.getStock();
     }
 
     @Override
-    @CacheEvict(value = "medicine_item", key = "#id") // Xóa cache item khi stock thay đổi
+    @CacheInvalidate(cacheName = "medicine-item")
     public Integer removeStock(Long id, Integer quantity) {
-        Medicine medicine = medicineRepository.findById(id)
+        Medicine medicine = medicineRepository.findByIdOptional(id)
                 .orElseThrow(() -> new HmsException(ErrorCode.MEDICINE_NOT_FOUND));
-        medicine.setStock(medicine.getStock()!=null ? medicine.getStock()-quantity :  quantity);
-
-        medicineRepository.save(medicine);
+        medicine.setStock(medicine.getStock() != null ? medicine.getStock() - quantity : quantity);
+        medicineRepository.persist(medicine);
         return medicine.getStock();
     }
 }
+

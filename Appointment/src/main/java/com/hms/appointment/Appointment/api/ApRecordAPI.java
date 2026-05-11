@@ -7,74 +7,83 @@ import com.hms.appointment.Appointment.dto.RecordDetails;
 import com.hms.appointment.Appointment.service.ApRecordService;
 import com.hms.appointment.Appointment.service.MedicineService;
 import com.hms.appointment.Appointment.service.PrescriptionService;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@RestController
-@CrossOrigin
-@RequestMapping("/appointment/report")
-@Validated
+@Path("/appointment/report")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 @RequiredArgsConstructor
 public class ApRecordAPI {
     private final ApRecordService apRecordService;
     private final PrescriptionService prescriptionService;
     private final MedicineService medicineService;
 
-    @PostMapping("/create")
-    public ResponseEntity<Long> createAppointmentReport(@RequestBody ApRecordDTO request) {
-        return new ResponseEntity<>(apRecordService.createApRecord(request),
-                HttpStatus.CREATED);
+    @POST
+    @Path("/create")
+    public Response createAppointmentReport(ApRecordDTO request) {
+        return Response.status(Response.Status.CREATED)
+                .entity(apRecordService.createApRecord(request))
+                .build();
     }
 
-    @PutMapping("/update")
-    public ResponseEntity<String> updateAppointmentReport(@RequestBody ApRecordDTO request) {
+    @PUT
+    @Path("/update")
+    public Response updateAppointmentReport(ApRecordDTO request) {
         apRecordService.updateApRecord(request);
-        return  new ResponseEntity<>("Appointment Report Updated", HttpStatus.OK);
+        return Response.ok("Appointment Report Updated").build();
     }
 
-    @GetMapping("/getDetailsByAppointmentId/{appointmentId}")
-    public ResponseEntity<ApRecordDTO> getAppointmentReportDetailsByAppointmentId(@PathVariable Long appointmentId) {
-        return new ResponseEntity<>(apRecordService
-                .getApRecordDetailsByAppointmentId(appointmentId), HttpStatus.OK);
+    @GET
+    @Path("/getDetailsByAppointmentId/{appointmentId}")
+    public Response getAppointmentReportDetailsByAppointmentId(@PathParam("appointmentId") Long appointmentId) {
+        return Response.ok(apRecordService.getApRecordDetailsByAppointmentId(appointmentId)).build();
     }
 
-    @GetMapping("/getByAppointmentId/{appointmentId}")
-    public ResponseEntity<ApRecordDTO> getAppointmentReportByAppointmentId(@PathVariable Long appointmentId) {
-        return new ResponseEntity<>(apRecordService.getApRecordByAppointmentId(appointmentId), HttpStatus.OK);
+    @GET
+    @Path("/getByAppointmentId/{appointmentId}")
+    public Response getAppointmentReportByAppointmentId(@PathParam("appointmentId") Long appointmentId) {
+        return Response.ok(apRecordService.getApRecordByAppointmentId(appointmentId)).build();
     }
 
-    @GetMapping("/getById/{recordId}")
-    public ResponseEntity<ApRecordDTO> getAppointmentReportById(@PathVariable Long recordId) {
-        return new ResponseEntity<>(apRecordService.getApRecordById(recordId), HttpStatus.OK);
+    @GET
+    @Path("/getById/{recordId}")
+    public Response getAppointmentReportById(@PathParam("recordId") Long recordId) {
+        return Response.ok(apRecordService.getApRecordById(recordId)).build();
     }
 
-    @GetMapping("/getRecordsByPatientId/{patientId}")
-    public ResponseEntity<List<RecordDetails>> getRecordsByPatientId(@PathVariable Long patientId) {
-        return new ResponseEntity<>(apRecordService.getRecordsByPatientId(patientId), HttpStatus.OK);
+    @GET
+    @Path("/getRecordsByPatientId/{patientId}")
+    public Response getRecordsByPatientId(@PathParam("patientId") Long patientId) {
+        return Response.ok(apRecordService.getRecordsByPatientId(patientId)).build();
     }
 
-    @GetMapping("/isRecordExists/{appointmentId}")
-    public ResponseEntity<Boolean> isRecordExists(@PathVariable Long appointmentId) {
-        return new ResponseEntity<>(apRecordService.isRecordExists(appointmentId), HttpStatus.OK);
+    @GET
+    @Path("/isRecordExists/{appointmentId}")
+    public Response isRecordExists(@PathParam("appointmentId") Long appointmentId) {
+        return Response.ok(apRecordService.isRecordExists(appointmentId)).build();
     }
 
-    @GetMapping("/getPrescriptionsByPatientId/{patientId}")
-    public ResponseEntity<List<PrescriptionDetails>> getPrescriptionsByPatientId(@PathVariable Long patientId) {
-        return new ResponseEntity<>(prescriptionService.getPrescriptionByPatientId(patientId), HttpStatus.OK);
+    @GET
+    @Path("/getPrescriptionsByPatientId/{patientId}")
+    public Response getPrescriptionsByPatientId(@PathParam("patientId") Long patientId) {
+        return Response.ok(prescriptionService.getPrescriptionByPatientId(patientId)).build();
     }
 
-    @GetMapping("/getAllPrescriptions")
-    public ResponseEntity<List<PrescriptionDetails>> getAllPrescriptions() {
-        return new ResponseEntity<>(prescriptionService.getPrescriptions(), HttpStatus.OK);
+    @GET
+    @Path("/getAllPrescriptions")
+    public Response getAllPrescriptions() {
+        return Response.ok(prescriptionService.getPrescriptions()).build();
     }
 
-    @GetMapping("/getMedicinesByPrescriptionId/{prescriptionId}")
-    public ResponseEntity<List<MedicineDTO>> getMedicinesByPrescriptionId(@PathVariable Long prescriptionId) {
-        return new ResponseEntity<>(medicineService.getAllMedicinesByPrescriptionId(prescriptionId), HttpStatus.OK);
+    @GET
+    @Path("/getMedicinesByPrescriptionId/{prescriptionId}")
+    public Response getMedicinesByPrescriptionId(@PathParam("prescriptionId") Long prescriptionId) {
+        return Response.ok(medicineService.getAllMedicinesByPrescriptionId(prescriptionId)).build();
     }
 }
+

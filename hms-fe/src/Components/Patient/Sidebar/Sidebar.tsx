@@ -35,11 +35,6 @@ const links = [
     url: "/patient/appointments",
     icon: <IconCalendarCheck stroke={1.5} />,
   },
-  {
-    name: "Cộng Đồng",
-    url: "/patient/community",
-    icon: <IconBuildingCommunity stroke={1.5} />,
-  },
 ];
 
 const Sidebar = () => {
