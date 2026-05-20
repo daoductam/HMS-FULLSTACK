@@ -1,0 +1,24 @@
+# Dependency directories
+node_modules/
+hms-fe/node_modules/
+hms-fe/build/
+hms-fe/build.zip
+hms-fe/build.rar
+
+# Maven build directories
+**/target/
+target/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Large Archives
+*.zip
+*.rar
+*.tar.gz

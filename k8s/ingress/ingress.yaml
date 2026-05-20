@@ -1,0 +1,66 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hms-ingress
+  namespace: hms-pro
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # Allow large file uploads for media service
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+spec:
+  rules:
+    - host: hms-pro.local
+      http:
+        paths:
+          # Route all API calls to the GatewayMS service
+          - path: /user
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway-ms-svc
+                port:
+                  number: 9000
+          - path: /profile
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway-ms-svc
+                port:
+                  number: 9000
+          - path: /appointment
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway-ms-svc
+                port:
+                  number: 9000
+          - path: /pharmacy
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway-ms-svc
+                port:
+                  number: 9000
+          - path: /media
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway-ms-svc
+                port:
+                  number: 9000
+          - path: /payment
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway-ms-svc
+                port:
+                  number: 9000
+          # Route frontend and fallback paths to React app
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hms-fe-svc
+                port:
+                  number: 80

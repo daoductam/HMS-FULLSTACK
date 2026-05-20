@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - config/configmap.yaml
+  - config/secrets.yaml
+  - infrastructure/mysql-statefulset.yaml
+  - infrastructure/redis-deployment.yaml
+  - infrastructure/zookeeper-statefulset.yaml
+  - infrastructure/kafka-statefulset.yaml
+  - services/gateway-ms.yaml
+  - services/user-ms.yaml
+  - services/profile-ms.yaml
+  - services/appointment-ms.yaml
+  - services/pharmacy-ms.yaml
+  - services/payment-ms.yaml
+  - services/notification-ms.yaml
+  - services/media-ms.yaml
+  - services/hms-fe.yaml
+  - ingress/ingress.yaml

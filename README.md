@@ -46,20 +46,74 @@ Hệ thống được chia thành các dịch vụ chuyên biệt:
    cd HMS-PRO
    ```
 
-2. **Khởi động hạ tầng**:
+### 💻 Lựa chọn 1: Khởi chạy bằng Docker Compose & Script Local (Development)
+
+1. **Khởi động hạ tầng**:
    Sử dụng Docker Compose để chạy MySQL, Redis, và Kafka:
    ```bash
    docker-compose up -d
    ```
 
-3. **Chạy các Service**:
+2. **Chạy các Service**:
    Sử dụng các script hỗ trợ để khởi chạy microservices và frontend:
    - **Windows (PowerShell)**: `.\run-service.ps1`
    - **Linux/macOS**: `./run-service.sh`
 
-4. **Truy cập ứng dụng**:
+3. **Truy cập ứng dụng**:
    - **Frontend**: `http://localhost:3000`
    - **API Gateway**: `http://localhost:9000`
+
+---
+
+### ☸️ Lựa chọn 2: Triển khai bằng Kubernetes (K8s / Production Mock)
+
+Hệ thống cung cấp đầy đủ manifest cấu hình Kubernetes dưới thư mục `k8s/` để triển khai thông qua **Kustomize**.
+
+#### 1. Yêu cầu môi trường K8s
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/) đã được cài đặt và kích hoạt Ingress addon.
+- Tài nguyên khuyến nghị cho Minikube: Tối thiểu **6GB RAM** và **4 CPUs**.
+
+#### 2. Các bước khởi chạy trên Minikube (Windows PowerShell)
+
+a. **Khởi động Minikube & Bật Ingress**:
+```powershell
+minikube start --driver=docker --memory=6144 --cpus=4
+minikube addons enable ingress
+```
+
+b. **Biên dịch Frontend**:
+```powershell
+Push-Location hms-fe
+$env:REACT_APP_LOCAL_BACKEND_URL="http://hms-pro.local"
+cmd /c npm run build
+Pop-Location
+```
+
+c. **Build Docker images trực tiếp trong Minikube Daemon**:
+Sử dụng script được cấu hình sẵn để chuyển đổi Docker CLI trỏ vào daemon của Minikube và đóng gói các services:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-images-minikube.ps1
+```
+
+d. **Deploy các tài nguyên lên K8s**:
+Sử dụng Kustomize (được tích hợp sẵn trong `kubectl` với cờ `-k`) để apply toàn bộ cấu hình:
+```powershell
+kubectl apply -k k8s/
+```
+
+e. **Cấu hình truy cập tên miền cục bộ**:
+1. Mở một terminal mới và chạy:
+   ```powershell
+   minikube tunnel
+   ```
+2. Thêm dòng sau vào file hosts của hệ điều hành (`C:\Windows\System32\drivers\etc\hosts` trên Windows):
+   ```text
+   127.0.0.1 hms-pro.local
+   ```
+
+3. **Truy cập ứng dụng**:
+   Mở trình duyệt và truy cập `http://hms-pro.local` (Ingress sẽ tự động định tuyến `/` tới frontend và các API endpoint `/user`, `/profile`, `/appointment`... tới API Gateway).
+
 
 ## 🔐 Bảo mật
 

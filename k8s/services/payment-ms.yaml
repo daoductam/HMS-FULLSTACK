@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-ms-svc
+  namespace: hms-pro
+  labels:
+    app: payment-ms
+spec:
+  ports:
+    - port: 8086
+      targetPort: 8086
+      name: http
+  selector:
+    app: payment-ms
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-ms
+  namespace: hms-pro
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-ms
+  template:
+    metadata:
+      labels:
+        app: payment-ms
+    spec:
+      containers:
+        - name: payment-ms
+          image: hms/payment-ms:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8086
+              name: http
+          env:
+            - name: DB_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: hms-config
+                  key: PAYMENT_DB_URL
+            - name: DB_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: hms-config
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hms-secret
+                  key: DB_PASSWORD
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                configMapKeyRef:
+                  name: hms-config
+                  key: KAFKA_BOOTSTRAP_SERVERS
+            - name: MOMO_REDIRECT_URL
+              value: "http://hms-pro.local/admin/payment-result"
+            - name: JAVA_OPTS
+              value: "-Xms64m -Xmx200m -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "300Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+          livenessProbe:
+            tcpSocket:
+              port: 8086
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 8
+          readinessProbe:
+            tcpSocket:
+              port: 8086
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 8

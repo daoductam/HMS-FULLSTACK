@@ -1,8 +1,23 @@
-FROM maven:3-eclipse-temurin-21-alpine as build
-COPY . .
-RUN mvn clean package -DskipTests
+# Stage 1: Build the application
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS build
+WORKDIR /app
 
-FROM openjdk:21-ea-1-jdk-slim
-COPY --from=build /target/media-0.0.1-SNAPSHOT.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar","app.jar"]
+# Copy and build the shared library first
+COPY hms-common /app/hms-common
+RUN mvn -f /app/hms-common/pom.xml clean install -DskipTests
+
+# Copy and build the main service
+COPY media /app/media
+RUN mvn -f /app/media/pom.xml clean package -DskipTests
+
+# Stage 2: Runtime
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+
+# Copy the Quarkus fast-jar files
+COPY --from=build /app/media/target/quarkus-app/ /app/quarkus-app/
+
+EXPOSE 9400
+
+ENV JAVA_OPTS="-Xms128m -Xmx512m -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/quarkus-app/quarkus-run.jar"]
