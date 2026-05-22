@@ -6,8 +6,8 @@ hms-fe/build.zip
 hms-fe/build.rar
 
 # Maven build directories
-**/target/
-target/
+# **/target/
+# target/
 
 # IDE files
 .idea/

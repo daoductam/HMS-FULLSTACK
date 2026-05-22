@@ -1,8 +1,51 @@
-Write-Host "Configuring Docker environment to use Minikube's Docker daemon..." -ForegroundColor Yellow
+param (
+    [switch]$SkipCompile
+)
+
+if (-not $SkipCompile) {
+    Write-Host "==========================================" -ForegroundColor Cyan
+    Write-Host "STEP 1: Compiling Java microservices on host..." -ForegroundColor Cyan
+    Write-Host "==========================================" -ForegroundColor Cyan
+
+    # 1. hms-common
+    Write-Host "`n[+] Compiling hms-common..." -ForegroundColor Green
+    mvn -f hms-common/pom.xml clean install -DskipTests
+    if ($LASTEXITCODE -ne 0) { Write-Error "Compilation of hms-common failed"; exit 1 }
+
+    $javaServices = @(
+        "GatewayMS",
+        "UserMS",
+        "ProfileMS",
+        "Appointment",
+        "PharmacyMS",
+        "PaymentMS",
+        "NotificationMS",
+        "media"
+    )
+
+    foreach ($service in $javaServices) {
+        Write-Host "`n[+] Compiling $service..." -ForegroundColor Green
+        mvn -f "$service/pom.xml" clean package -DskipTests
+        if ($LASTEXITCODE -ne 0) { Write-Error "Compilation of $service failed"; exit 1 }
+    }
+} else {
+    Write-Host "==========================================" -ForegroundColor Cyan
+    Write-Host "STEP 1: Skipping Java compilation (using existing host-built JARs)..." -ForegroundColor Cyan
+    Write-Host "==========================================" -ForegroundColor Cyan
+}
+
+Write-Host "`n==========================================" -ForegroundColor Cyan
+Write-Host "STEP 2: Configuring Docker environment to use Minikube's Docker daemon..." -ForegroundColor Cyan
+Write-Host "==========================================" -ForegroundColor Cyan
 minikube -p minikube docker-env | Invoke-Expression
+$env:DOCKER_BUILDKIT="1"
 
 Write-Host "`n[+] Verification: Current Docker info (should point to minikube):"
 docker info | Select-String "Name:"
+
+Write-Host "`n==========================================" -ForegroundColor Cyan
+Write-Host "STEP 3: Building Docker images..." -ForegroundColor Cyan
+Write-Host "==========================================" -ForegroundColor Cyan
 
 Write-Host "`n[+] Building hms/hms-fe:latest..." -ForegroundColor Green
 docker build -t hms/hms-fe:latest -f hms-fe/Dockerfile ./hms-fe
