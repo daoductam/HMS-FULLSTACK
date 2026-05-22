@@ -248,3 +248,125 @@ Thông thường trên Windows, Ingress Controller của Minikube chạy dưới
 | **Vào terminal bên trong Container** | `kubectl exec -it <tên-pod> -n hms-pro -- sh` |
 | **Xem danh sách các Image trong Minikube** | `minikube image ls` hoặc `docker images` (sau khi eval docker-env) |
 | **Mở Dashboard quản trị trực quan** | `minikube dashboard` |
+
+---
+
+## 5. Hướng Dẫn Chia Sẻ Ứng Dụng Ra Thiết Bị Ngoài (Điện Thoại & Máy Khác)
+
+Thông thường, khi chạy hệ thống trên Minikube ở máy Windows, các thiết bị ngoại vi như điện thoại di động sẽ không thể truy cập được thông qua tên miền ảo `hms-pro.local` (do điện thoại không thể sửa file hosts). 
+
+Để giải quyết vấn đề này, ta có thể dùng 2 phương pháp: **Mạng nội bộ LAN (Wi-Fi)** hoặc **Đường hầm Internet (Localtunnel)**.
+
+### A. Chuẩn bị Hệ Thống (Bắt buộc cho cả 2 cách)
+
+Để cụm Kubernetes trong Minikube chấp nhận các request từ nguồn ngoài (IP mạng LAN hoặc domain ngẫu nhiên của tunnel), ta cần cấu hình:
+
+1. **Bỏ giới hạn tên miền trong Ingress**:
+   Trong file [ingress.yaml](file:///d:/class/PTPMHDV/backend-nhap/HMS-PRO/k8s/ingress/ingress.yaml), xóa dòng cấu hình `- host: hms-pro.local` để Ingress chấp nhận mọi kết nối đầu vào (wildcard).
+   ```yaml
+   spec:
+     rules:
+       - http:
+           paths: ...
+   ```
+
+2. **Mở rộng cấu hình CORS**:
+   Trong [configmap.yaml](file:///d:/class/PTPMHDV/backend-nhap/HMS-PRO/k8s/config/configmap.yaml), đổi `CORS_ALLOWED_ORIGINS` và `ALLOWED_ORIGINS` sang `"*"` để tránh lỗi chặn CORS từ trình duyệt điện thoại:
+   ```yaml
+   CORS_ALLOWED_ORIGINS: "*"
+   ALLOWED_ORIGINS: "*"
+   ```
+
+3. **Cấu hình Dynamic API Endpoint ở Frontend**:
+   Trong [AxiosInterceptor.tsx](file:///d:/class/PTPMHDV/backend-nhap/HMS-PRO/hms-fe/src/Interceptor/AxiosInterceptor.tsx), thay vì fix cứng API URL, sử dụng hàm tự động lấy domain hiện tại của trình duyệt làm gốc gọi API:
+   ```typescript
+   const getBaseURL = () => {
+     if (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+       return window.location.origin;
+     }
+     return process.env.REACT_APP_API_URL || process.env.REACT_APP_LOCAL_BACKEND_URL;
+   };
+   ```
+
+4. **Áp dụng cấu hình và Build**:
+   ```powershell
+   # 1. Build lại React frontend trên Host
+   cd hms-fe
+   npm run build
+   cd ..
+
+   # 2. Rebuild docker images trong Minikube Daemon
+   powershell -ExecutionPolicy Bypass -File .\scripts\build-images-minikube.ps1 -SkipCompile
+
+   # 3. Apply cấu hình mới và restart pod
+   kubectl apply -f k8s/ingress/ingress.yaml
+   kubectl apply -f k8s/config/configmap.yaml
+   kubectl rollout restart deployment -n hms-pro
+   ```
+
+---
+
+### B. Phương Pháp 1: Truy Cập Qua Mạng LAN Wi-Fi (Nhanh & Ổn Định Nhất)
+
+Phương pháp này khuyên dùng nếu điện thoại và máy tính của bạn bắt chung một mạng Wi-Fi (hoặc điện thoại bắt Wi-Fi do máy tính Windows phát ra).
+
+#### Sơ đồ định tuyến mạng LAN:
+```mermaid
+graph TD
+    Phone([Điện thoại di động]) -->|Kết nối Wi-Fi chung| Router[Bộ định tuyến Wi-Fi]
+    Router -->|IP máy tính: 172.20.10.10| PC[Máy tính Host Windows]
+    
+    subgraph PC_Environment [Máy Tính Host - Cổng 80]
+        PC -->|minikube tunnel| Ingress[Ingress Nginx Controller]
+        
+        subgraph Minikube_K8s [Cụm Kubernetes]
+            Ingress -->|/| FE[hms-fe-svc]
+            Ingress -->|/user, /profile, ...| Gateway[gateway-ms-svc]
+        end
+    end
+```
+
+#### Các bước thực hiện:
+1. **Tìm địa chỉ IP mạng Wi-Fi của máy tính Windows**:
+   Mở Command Prompt/PowerShell gõ:
+   ```cmd
+   ipconfig
+   ```
+   Tìm đến phần **Wireless LAN adapter Wi-Fi** và ghi lại dòng **IPv4 Address** (Ví dụ: `172.20.10.10`).
+
+2. Đảm bảo dịch vụ `minikube tunnel` đang chạy trên máy tính để chuyển tiếp cổng 80.
+3. Trên trình duyệt điện thoại, truy cập trực tiếp địa chỉ:
+   `http://<Địa-chỉ-IP-máy-tính>` (Ví dụ: `http://172.20.10.10`).
+
+---
+
+### C. Phương Pháp 2: Truy Cập Qua Internet (Sử dụng Localtunnel)
+
+Phương pháp này phù hợp khi thiết bị di động sử dụng mạng 3G/4G hoặc ở mạng Wi-Fi khác hoàn toàn so với máy tính.
+
+#### Sơ đồ định tuyến Localtunnel:
+```mermaid
+graph TD
+    Phone([Điện thoại di động]) -->|Truy cập internet| LT_Server[Localtunnel Public Server]
+    LT_Server -->|Đường hầm an toàn SSH/TCP| LT_Client[Localtunnel Client trên PC]
+    
+    subgraph PC_Environment [Máy Tính Host - Cổng 80]
+        LT_Client -->|Forward nội bộ| PC_Port80[Local Port 80]
+        PC_Port80 -->|minikube tunnel| Ingress[Ingress Nginx Controller]
+        
+        subgraph Minikube_K8s [Cụm Kubernetes]
+            Ingress -->|/| FE[hms-fe-svc]
+            Ingress -->|/user, /profile, ...| Gateway[gateway-ms-svc]
+        end
+    end
+```
+
+#### Các bước thực hiện:
+1. **Khởi chạy localtunnel** trỏ vào cổng 80 của máy Host:
+   ```powershell
+   npx -y localtunnel --port 80
+   ```
+2. Công cụ sẽ trả về một đường link công khai dạng:
+   `your url is: https://witty-ants-run.loca.lt`
+3. Truy cập đường link này trên trình duyệt điện thoại.
+4. **Chú ý:** Trong lần truy cập đầu tiên, localtunnel sẽ hiển thị trang cảnh báo an toàn. Bạn cần nhấn vào nút **"Click to Continue"** hoặc **"Visit Site"** để tiếp tục tải giao diện chính của ứng dụng.

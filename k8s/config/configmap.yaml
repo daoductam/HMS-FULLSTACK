@@ -29,5 +29,5 @@ data:
   DB_USERNAME: "root"
 
   # CORS Configurations (pointing to local ingress domain)
-  CORS_ALLOWED_ORIGINS: "http://hms-pro.local"
-  ALLOWED_ORIGINS: "http://hms-pro.local"
+  CORS_ALLOWED_ORIGINS: "*"
+  ALLOWED_ORIGINS: "*"

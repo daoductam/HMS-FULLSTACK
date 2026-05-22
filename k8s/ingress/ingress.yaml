@@ -10,8 +10,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
 spec:
   rules:
-    - host: hms-pro.local
-      http:
+    - http:
         paths:
           # Route all API calls to the GatewayMS service
           - path: /user

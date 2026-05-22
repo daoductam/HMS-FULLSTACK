@@ -1,7 +1,13 @@
 import axios, { InternalAxiosRequestConfig } from "axios";
+const getBaseURL = () => {
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+    return window.location.origin;
+  }
+  return process.env.REACT_APP_API_URL || process.env.REACT_APP_LOCAL_BACKEND_URL;
+};
+
 const axiosInstance = axios.create({
-  baseURL:
-    process.env.REACT_APP_API_URL || process.env.REACT_APP_LOCAL_BACKEND_URL,
+  baseURL: getBaseURL(),
 });
 // Lấy Base URL từ biến môi trường
 const BASE_URL = process.env.REACT_APP_LOCAL_BACKEND_URL;
