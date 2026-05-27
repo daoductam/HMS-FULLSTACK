@@ -59,45 +59,50 @@ jobs:
         include:
           - service: gateway
             path: GatewayMS
-            image: ghcr.io/${{ github.repository }}/gateway-ms
+            image: gateway-ms
             changed: ${{ needs.detect-changes.outputs.gateway }}
           - service: user
             path: UserMS
-            image: ghcr.io/${{ github.repository }}/user-ms
+            image: user-ms
             changed: ${{ needs.detect-changes.outputs.user }}
           - service: profile
             path: ProfileMS
-            image: ghcr.io/${{ github.repository }}/profile-ms
+            image: profile-ms
             changed: ${{ needs.detect-changes.outputs.profile }}
           - service: appointment
             path: Appointment
-            image: ghcr.io/${{ github.repository }}/appointment-ms
+            image: appointment-ms
             changed: ${{ needs.detect-changes.outputs.appointment }}
           - service: pharmacy
             path: PharmacyMS
-            image: ghcr.io/${{ github.repository }}/pharmacy-ms
+            image: pharmacy-ms
             changed: ${{ needs.detect-changes.outputs.pharmacy }}
           - service: payment
             path: PaymentMS
-            image: ghcr.io/${{ github.repository }}/payment-ms
+            image: payment-ms
             changed: ${{ needs.detect-changes.outputs.payment }}
           - service: notification
             path: NotificationMS
-            image: ghcr.io/${{ github.repository }}/notification-ms
+            image: notification-ms
             changed: ${{ needs.detect-changes.outputs.notification }}
           - service: media
             path: media
-            image: ghcr.io/${{ github.repository }}/media-ms
+            image: media-ms
             changed: ${{ needs.detect-changes.outputs.media }}
           - service: frontend
             path: hms-fe
-            image: ghcr.io/${{ github.repository }}/hms-fe
+            image: hms-fe
             changed: ${{ needs.detect-changes.outputs.frontend }}
 
     steps:
       - name: Checkout Code
         if: matrix.changed == 'true'
         uses: actions/checkout@v4
+
+      - name: Downcase repository name
+        if: matrix.changed == 'true'
+        run: |
+          echo "IMAGE_REPOSITORY=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Set up JDK 21 (For Backend Java)
         if: matrix.changed == 'true' && matrix.service != 'frontend'
@@ -146,8 +151,8 @@ jobs:
           file: ${{ matrix.path }}/Dockerfile
           push: true
           tags: |
-            ${{ matrix.image }}:latest
-            ${{ matrix.image }}:${{ github.sha }}
+            ghcr.io/${{ env.IMAGE_REPOSITORY }}/${{ matrix.image }}:latest
+            ghcr.io/${{ env.IMAGE_REPOSITORY }}/${{ matrix.image }}:${{ github.sha }}
 
   # Job 3: CD Test - Deploy & Khởi động thử cụm K8s Minikube trong Runner
   k8s-test-deploy:
