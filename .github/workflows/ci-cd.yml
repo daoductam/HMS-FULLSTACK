@@ -1,0 +1,185 @@
+name: HMS-PRO CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "feat/quarkus-version", "main" ]
+  pull_request:
+    branches: [ "feat/quarkus-version", "main" ]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # Job 1: Phát hiện service nào thay đổi code
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      gateway: ${{ steps.filter.outputs.gateway }}
+      user: ${{ steps.filter.outputs.user }}
+      profile: ${{ steps.filter.outputs.profile }}
+      appointment: ${{ steps.filter.outputs.appointment }}
+      pharmacy: ${{ steps.filter.outputs.pharmacy }}
+      payment: ${{ steps.filter.outputs.payment }}
+      notification: ${{ steps.filter.outputs.notification }}
+      media: ${{ steps.filter.outputs.media }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            gateway:
+              - 'GatewayMS/**'
+            user:
+              - 'UserMS/**'
+            profile:
+              - 'ProfileMS/**'
+            appointment:
+              - 'Appointment/**'
+            pharmacy:
+              - 'PharmacyMS/**'
+            payment:
+              - 'PaymentMS/**'
+            notification:
+              - 'NotificationMS/**'
+            media:
+              - 'media/**'
+            frontend:
+              - 'hms-fe/**'
+
+  # Job 2: Build & Push Docker image của từng service nếu có thay đổi
+  build-and-push:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: gateway
+            path: GatewayMS
+            image: ghcr.io/${{ github.repository }}/gateway-ms
+            changed: ${{ needs.detect-changes.outputs.gateway }}
+          - service: user
+            path: UserMS
+            image: ghcr.io/${{ github.repository }}/user-ms
+            changed: ${{ needs.detect-changes.outputs.user }}
+          - service: profile
+            path: ProfileMS
+            image: ghcr.io/${{ github.repository }}/profile-ms
+            changed: ${{ needs.detect-changes.outputs.profile }}
+          - service: appointment
+            path: Appointment
+            image: ghcr.io/${{ github.repository }}/appointment-ms
+            changed: ${{ needs.detect-changes.outputs.appointment }}
+          - service: pharmacy
+            path: PharmacyMS
+            image: ghcr.io/${{ github.repository }}/pharmacy-ms
+            changed: ${{ needs.detect-changes.outputs.pharmacy }}
+          - service: payment
+            path: PaymentMS
+            image: ghcr.io/${{ github.repository }}/payment-ms
+            changed: ${{ needs.detect-changes.outputs.payment }}
+          - service: notification
+            path: NotificationMS
+            image: ghcr.io/${{ github.repository }}/notification-ms
+            changed: ${{ needs.detect-changes.outputs.notification }}
+          - service: media
+            path: media
+            image: ghcr.io/${{ github.repository }}/media-ms
+            changed: ${{ needs.detect-changes.outputs.media }}
+          - service: frontend
+            path: hms-fe
+            image: ghcr.io/${{ github.repository }}/hms-fe
+            changed: ${{ needs.detect-changes.outputs.frontend }}
+
+    steps:
+      - name: Checkout Code
+        if: matrix.changed == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (For Backend Java)
+        if: matrix.changed == 'true' && matrix.service != 'frontend'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build Java Package
+        if: matrix.changed == 'true' && matrix.service != 'frontend'
+        run: |
+          # Build common library trước nếu là Quarkus Backend
+          mvn -f hms-common/pom.xml clean install -DskipTests
+          # Build service cụ thể
+          mvn -f ${{ matrix.path }}/pom.xml clean package -DskipTests
+
+      - name: Set up Node.js (For Frontend React)
+        if: matrix.changed == 'true' && matrix.service == 'frontend'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: hms-fe/package-lock.json
+
+      - name: Build React Frontend
+        if: matrix.changed == 'true' && matrix.service == 'frontend'
+        run: |
+          cd hms-fe
+          npm ci
+          REACT_APP_LOCAL_BACKEND_URL="http://hms-pro.local" npm run build
+
+      - name: Log in to GHCR
+        if: matrix.changed == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        if: matrix.changed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.path }}/Dockerfile
+          push: true
+          tags: |
+            ${{ matrix.image }}:latest
+            ${{ matrix.image }}:${{ github.sha }}
+
+  # Job 3: CD Test - Deploy & Khởi động thử cụm K8s Minikube trong Runner
+  k8s-test-deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Start Minikube
+        uses: medyagh/setup-minikube@master
+        with:
+          cache: true
+          container-runtime: docker
+          addons: ingress
+
+      - name: Apply Config & Deploy K8s resources
+        run: |
+          kubectl apply -k k8s/
+
+      - name: Wait and Verify Pods Status
+        run: |
+          echo "Đang đợi 90 giây để các Pod khởi động..."
+          sleep 90
+          kubectl get pods -n hms-pro
+          
+          # Kiểm tra xem có Pod nào bị lỗi CrashLoopBackOff hay không
+          FAILED_PODS=$(kubectl get pods -n hms-pro | grep -E "CrashLoopBackOff|Error" || true)
+          if [ ! -z "$FAILED_PODS" ]; then
+            echo "PHÁT HIỆN POD BỊ LỖI:"
+            echo "$FAILED_PODS"
+            exit 1
+          else
+            echo "TẤT CẢ CÁC POD KHỞI ĐỘNG THÀNH CÔNG!"
+          fi
