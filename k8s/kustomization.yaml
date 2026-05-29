@@ -18,4 +18,12 @@ resources:
   - services/notification-ms.yaml
   - services/media-ms.yaml
   - services/hms-fe.yaml
+  - services/ai-chatbot.yaml
+  - monitoring/prometheus-configmap.yaml
+  - monitoring/prometheus-deployment.yaml
+  - monitoring/prometheus-svc.yaml
+  - monitoring/grafana-configmap.yaml
+  - monitoring/grafana-dashboards-configmap.yaml
+  - monitoring/grafana-deployment.yaml
+  - monitoring/grafana-svc.yaml
   - ingress/ingress.yaml
