@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: 'HMS-PRO Dashboards'
+    orgId: 1
+    folder: 'HMS-PRO'
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 10
+    options:
+      path: /etc/grafana/dashboards

@@ -122,6 +122,12 @@
             <artifactId>commons-codec</artifactId>
         </dependency>
 
+        <!-- Metrics (Prometheus) -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>io.quarkus</groupId>

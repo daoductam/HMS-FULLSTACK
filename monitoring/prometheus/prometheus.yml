@@ -1,0 +1,53 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'gateway-ms'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:9000']
+        labels:
+          service: 'gateway-ms'
+
+  - job_name: 'user-ms'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+        labels:
+          service: 'user-ms'
+
+  - job_name: 'profile-ms'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:9100']
+        labels:
+          service: 'profile-ms'
+
+  - job_name: 'appointment-ms'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:9200']
+        labels:
+          service: 'appointment-ms'
+
+  - job_name: 'pharmacy-ms'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:9300']
+        labels:
+          service: 'pharmacy-ms'
+
+  - job_name: 'payment-ms'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:8086']
+        labels:
+          service: 'payment-ms'
+
+  - job_name: 'notification-ms'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:8085']
+        labels:
+          service: 'notification-ms'
