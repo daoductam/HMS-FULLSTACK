@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "../../Store";
+import axiosInstance from "../../Interceptor/AxiosInterceptor";
 
 // ==========================================
 // 1. CẤU HÌNH & DỮ LIỆU CỐ ĐỊNH (LOCAL LOGIC)
@@ -119,18 +120,14 @@ const ChatbotWidget: React.FC = () => {
       // Nếu role trong DB là "ROLE_ADMIN", "ROLE_DOCTOR" -> cắt chuỗi nếu cần
       const userRole = (user as any).role || (user as any).roles || "PATIENT";
 
-      const response = await fetch(CONFIG.apiEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userText,
-          user_id: String(userId), // Chuyển sang string cho an toàn với Backend
-          role: String(userRole), // Gửi thêm Role
-        }),
+      const response = await axiosInstance.post("/chatbot/chat", {
+        message: userText,
+        user_id: String(userId), // Chuyển sang string cho an toàn với Backend
+        role: String(userRole), // Gửi thêm Role
       });
       // --------------------------------------
 
-      const data = await response.json();
+      const data = response.data;
 
       setMessages((prev) => [
         ...prev,

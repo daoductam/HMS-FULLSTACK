@@ -8,6 +8,7 @@ import com.hms.appointment.Appointment.exception.HmsException;
 import com.hms.appointment.Appointment.repository.AppointmentRepository;
 import com.hms.appointment.Appointment.repository.ShiftRepository;
 import com.hms.hms_common.event.AppointmentEvent;
+import com.hms.hms_common.lock.DistributedLock;
 import io.quarkus.cache.CacheInvalidateAll;
 import io.quarkus.cache.CacheResult;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -43,6 +44,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Transactional
     @CacheInvalidateAll(cacheName = "stats-dashboard")
     @CacheInvalidateAll(cacheName = "stats-reasons")
+    @DistributedLock(keyExpression = "appointmentDTO.doctorId")
     public Long scheduleAppointment(AppointmentDTO appointmentDTO) {
         // 1. Validate Doctor
         Boolean doctorExists = profileClient.doctorExists(appointmentDTO.getDoctorId());

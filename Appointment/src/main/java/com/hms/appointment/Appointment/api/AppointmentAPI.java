@@ -3,6 +3,7 @@ package com.hms.appointment.Appointment.api;
 import com.hms.appointment.Appointment.dto.*;
 import com.hms.appointment.Appointment.service.AppointmentService;
 import com.hms.appointment.Appointment.service.PrescriptionService;
+import com.hms.hms_common.limiter.RateLimit;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -21,6 +22,7 @@ public class AppointmentAPI {
 
     @POST
     @Path("/schedule")
+    @RateLimit(limit = 3, duration = 60)
     public Response scheduleAppointment(AppointmentDTO appointmentDTO)  {
         return Response.status(Response.Status.CREATED)
                 .entity(appointmentService.scheduleAppointment(appointmentDTO))
@@ -112,4 +114,3 @@ public class AppointmentAPI {
         return Response.ok(appointmentService.getTodaysAppointment()).build();
     }
 }
-

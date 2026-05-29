@@ -11,6 +11,7 @@ data:
   PHARMACYMS_URL: "http://pharmacy-ms-svc:9300"
   PAYMENTMS_URL: "http://payment-ms-svc:8086"
   MEDIAMS_URL: "http://media-ms-svc:9400"
+  CHATBOTMS_URL: "http://ai-chatbot-svc:8000"
   
   # Cache & Messaging hosts
   REDIS_HOST: "redis-svc"

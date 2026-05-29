@@ -55,6 +55,13 @@ spec:
                 name: gateway-ms-svc
                 port:
                   number: 9000
+          - path: /chatbot
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway-ms-svc
+                port:
+                  number: 9000
           # Route frontend and fallback paths to React app
           - path: /
             pathType: Prefix

@@ -67,8 +67,22 @@ Nếu muốn test giao diện trên điện thoại hoặc máy tính bảng k�
 2. Tìm đến phần **Wireless LAN adapter Wi-Fi** và copy dòng **IPv4 Address** (Ví dụ: `192.168.1.15`).
 3. Dùng điện thoại truy cập địa chỉ: **`http://192.168.1.15`**
 
-### 3. Chia sẻ ra Internet (Localtunnel - Dễ bị lag do đi qua server nước ngoài)
+### 3. Chia sẻ ra Internet (Khuyên dùng Ngrok - Ổn định và bảo mật)
 Sử dụng nếu thiết bị test ngoài mạng Wi-Fi của bạn (sử dụng 3G/4G):
+
+#### Lựa chọn A: Sử dụng Ngrok (Khuyên dùng, hạn chế tối đa lỗi 502)
+1. Đăng ký tài khoản miễn phí trên [ngrok.com](https://ngrok.com/) để lấy **Authtoken**.
+2. Thêm Authtoken vào máy của bạn (chỉ cần thực hiện lần đầu tiên):
+   ```powershell
+   ngrok config add-authtoken <TOKEN_CỦA_BẠN>
+   ```
+3. Khởi chạy ngrok trỏ vào cổng 80 (cổng của Minikube Ingress):
+   ```powershell
+   ngrok http 80 --host-header=localhost
+   ```
+4. Sao chép địa chỉ URL được cấp (dạng `https://xxxx.ngrok-free.app`) và truy cập.
+
+#### Lựa chọn B: Sử dụng Localtunnel (Nhanh gọn, không cần tài khoản nhưng dễ bị lỗi 502)
 1. Mở một terminal mới và chạy:
    ```powershell
    cmd /c npx -y localtunnel --port 80

@@ -67,6 +67,11 @@ spec:
                 configMapKeyRef:
                   name: hms-config
                   key: PAYMENTMS_URL
+            - name: CHATBOTMS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: hms-config
+                  key: CHATBOTMS_URL
             - name: ALLOWED_ORIGINS
               valueFrom:
                 configMapKeyRef:

@@ -57,6 +57,16 @@ spec:
                 configMapKeyRef:
                   name: hms-config
                   key: CORS_ALLOWED_ORIGINS
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: hms-config
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: hms-config
+                  key: REDIS_PORT
             - name: JAVA_OPTS
               value: "-Xms64m -Xmx200m -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
           resources:

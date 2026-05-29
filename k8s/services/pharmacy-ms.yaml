@@ -57,6 +57,16 @@ spec:
                 configMapKeyRef:
                   name: hms-config
                   key: PAYMENTMS_URL
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: hms-config
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: hms-config
+                  key: REDIS_PORT
             - name: HMS_SECRET_KEY
               valueFrom:
                 secretKeyRef:

@@ -35,6 +35,7 @@ public class PaymentAPI {
     // API 1: Tạo link thanh toán
     @POST
     @Path("/create-momo")
+    @Produces(MediaType.TEXT_PLAIN)
     public Response createMomo(@RestQuery String orderId, @RestQuery Double amount) {
         String payUrl = paymentService.createMomoPayment(orderId, amount, "Thanh toan don thuoc");
         return Response.ok(payUrl).build();

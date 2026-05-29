@@ -59,6 +59,16 @@ spec:
                   key: KAFKA_BOOTSTRAP_SERVERS
             - name: MOMO_REDIRECT_URL
               value: "http://hms-pro.local/admin/payment-result"
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: hms-config
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: hms-config
+                  key: REDIS_PORT
             - name: JAVA_OPTS
               value: "-Xms64m -Xmx200m -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
           resources:

@@ -51,10 +51,10 @@ if USE_PROXY and PROXY_URL:
 
 # Cấu hình Database
 DB_CONFIG = {
-    "host": "localhost",
-    "user": "root",
-    "password": "TaM123456789@",
-    "port": 3306
+    "host": os.environ.get("DB_HOST", "localhost"),
+    "user": os.environ.get("DB_USER", "root"),
+    "password": os.environ.get("DB_PASSWORD", "TaM123456789@"),
+    "port": int(os.environ.get("DB_PORT", 3306))
 }
 
 class ChatRequest(BaseModel):
@@ -535,6 +535,7 @@ def call_groq_api(system_instruction: str, user_message: str) -> str:
 # ==================== CHAT ENDPOINT ====================
 
 @app.post("/chat")
+@app.post("/chatbot/chat")
 async def chat_endpoint(request: ChatRequest):
     try:
         current_time = datetime.now().strftime("%H:%M %d/%m/%Y")
@@ -585,6 +586,7 @@ async def chat_endpoint(request: ChatRequest):
         raise HTTPException(status_code=500, detail=f"Lỗi không xác định: {str(e)}")
 
 @app.get("/health")
+@app.get("/chatbot/health")
 async def health_check():
     return {"status": "ok", "provider": "groq", "model": GROQ_MODEL}
 
